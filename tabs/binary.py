@@ -38,7 +38,7 @@ def _sidebar_single_group() -> dict:
 
     input_mode = st.sidebar.radio(
         "Input format",
-        ["Successes & Total", "Successes & Failures"],
+        ["Successes & Total", "Successes & Failures", "Success % & Total"],
         horizontal=True,
         key="binary_input_mode",
     )
@@ -51,6 +51,16 @@ def _sidebar_single_group() -> dict:
             "Successes", min_value=0, max_value=total, value=50, step=1,
             key="binary_successes",
         )
+        failures = total - successes
+    elif input_mode == "Success % & Total":
+        total = st.sidebar.number_input(
+            "Total trials", min_value=2, value=100, step=1, key="binary_total_pct",
+        )
+        success_pct = st.sidebar.number_input(
+            "Success %", min_value=0.0, max_value=100.0, value=50.0, step=0.1,
+            format="%.1f", key="binary_success_pct",
+        )
+        successes = int(round(success_pct / 100.0 * total))
         failures = total - successes
     else:
         successes = st.sidebar.number_input(
