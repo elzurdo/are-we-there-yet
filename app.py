@@ -15,21 +15,31 @@ st.set_page_config(
     layout="centered",
 )
 
-st.title("Are We There Yet? 🚗")
-st.caption("Sequential Testing Advisor  •  Enhanced Precision is the Goal (ePitG)")
-
-st.markdown(
-    "Input your experiment's summary statistics below to check whether "
-    "you've collected enough data for a conclusive decision."
-)
-
-# --- Main tabs ---
 from tabs import binary, continuous
 
-tab_binary, tab_continuous = st.tabs(["Binary Variables", "Continuous Variables"])
+# ── Sidebar ──────────────────────────────────────────────────────────
+st.sidebar.title("🚗 Are We There Yet?")
+st.sidebar.caption("Sequential Testing Advisor")
 
-with tab_binary:
-    binary.render()
+variable_type = st.sidebar.radio(
+    "Variable type",
+    ["Binary", "Continuous"],
+    key="variable_type",
+)
 
-with tab_continuous:
-    continuous.render()
+st.sidebar.divider()
+
+# Collect inputs in sidebar (each module owns its own sidebar widgets)
+if variable_type == "Binary":
+    inputs = binary.sidebar_inputs()
+else:
+    inputs = continuous.sidebar_inputs()
+
+# ── Main area ────────────────────────────────────────────────────────
+st.title("Are We There Yet? 🚗")
+st.caption("Enhanced Precision is the Goal (ePitG)  •  Sequential Testing Advisor")
+
+if variable_type == "Binary":
+    binary.render_results(inputs)
+else:
+    continuous.render_results(inputs)
