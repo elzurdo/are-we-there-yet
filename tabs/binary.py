@@ -18,6 +18,9 @@ from utils.decision import epitg_decision
 from utils.viz import plot_posterior_binary, plot_posterior_difference, plot_two_beta_posteriors, plot_nhst_posterior
 from utils.verdict import render_verdict_display
 from utils.nhst import nhst_test
+from utils.tutorials import (
+    NHST_LIMITATIONS, MATHS_BINARY_SINGLE_GROUP, MATHS_BINARY_BETWEEN_GROUPS,
+)
 
 
 def sidebar_inputs() -> dict:
@@ -304,27 +307,11 @@ def _render_single_group(inputs: dict):
 
             # Tutorial
             with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
-                st.markdown("""
-**Limitations of NHST (p-value) stopping criteria:**
+                st.markdown(NHST_LIMITATIONS)
 
-1. **No precision guarantee**: A p < 0.05 doesn't tell you how narrow your confidence interval is. 
-   You could have a very wide CI that still yields statistical significance.
-
-2. **Dichotomous thinking**: NHST forces a binary decision (reject/not reject) that ignores effect size. 
-   A tiny, practically meaningless difference can be "significant" with enough data.
-
-3. **No stopping rule**: Traditional NHST doesn't tell you *when* to stop collecting data. 
-   The ePitG method explicitly plans for a precision goal.
-
-4. **Ignores practical equivalence**: NHST can't distinguish between "no effect" and "effect is 
-   too small to matter." The ROPE addresses this directly.
-
-**ePitG combines:**
-- **Precision** (HDI width < Goal) — ensures your estimate is narrow enough
-- **Location** (HDI vs ROPE) — ensures you can make a conclusive decision about practical significance
-
-This gives you both statistical confidence *and* practical interpretability.
-                """)
+        # --- Maths Tutorial ---
+        with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
+            st.markdown(MATHS_BINARY_SINGLE_GROUP)
 
 # ──────────────────────────────────────────────────────────────
 # Between Groups
@@ -630,67 +617,8 @@ def _render_between_groups(inputs: dict):
 
             # Tutorial
             with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
-                st.markdown("""
-**Limitations of NHST (p-value) stopping criteria:**
+                st.markdown(NHST_LIMITATIONS)
 
-1. **No precision guarantee**: A p < 0.05 doesn't tell you how narrow your confidence interval is. 
-   You could have a very wide CI that still yields statistical significance.
-
-2. **Dichotomous thinking**: NHST forces a binary decision (reject/not reject) that ignores effect size. 
-   A tiny, practically meaningless difference can be "significant" with enough data.
-
-3. **No stopping rule**: Traditional NHST doesn't tell you *when* to stop collecting data. 
-   The ePitG method explicitly plans for a precision goal.
-
-4. **Ignores practical equivalence**: NHST can't distinguish between "no effect" and "effect is 
-   too small to matter." The ROPE addresses this directly.
-
-**ePitG combines:**
-- **Precision** (HDI width < Goal) — ensures your estimate is narrow enough
-- **Location** (HDI vs ROPE) — ensures you can make a conclusive decision about practical significance
-
-This gives you both statistical confidence *and* practical interpretability.
-                """)
-
-    # --- Tutorial ---
+    # --- Maths Tutorial ---
     with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
-        st.markdown(r"""
-**Comparing two proportions using the Central Limit Theorem**
-
-When we observe binary outcomes in two independent groups:
-- Group A: $\hat{p}_A = s_A / n_A$
-- Group B: $\hat{p}_B = s_B / n_B$
-
-We're interested in their **difference**: $\delta = \hat{p}_A - \hat{p}_B$
-
-**By the CLT**, each proportion is approximately Normal for large enough samples:
-
-$$\hat{p}_i \;\dot\sim\; N\!\left(p_i,\; \frac{p_i(1 - p_i)}{n_i}\right)$$
-
-Since the groups are independent, the difference is also Normal:
-
-$$\delta \;\dot\sim\; N\!\left(\hat{p}_A - \hat{p}_B,\;\; \text{SE}^2\right)$$
-
-where the **standard error** is:
-
-$$\text{SE} = \sqrt{\frac{\hat{p}_A(1 - \hat{p}_A)}{n_A} + \frac{\hat{p}_B(1 - \hat{p}_B)}{n_B}}$$
-
-**The HDI** (Highest Density Interval) for a Normal distribution is symmetric:
-
-$$\text{HDI} = \delta \pm z_{\alpha/2} \cdot \text{SE}$$
-
-where $z_{\alpha/2} = \Phi^{-1}\!\left(\frac{1 + \text{HDI mass}}{2}\right)$
-
-**HDI width** (our precision measure):
-
-$$\text{HDI width} = 2 \cdot z_{\alpha/2} \cdot \text{SE}$$
-
----
-
-**Rule of thumb for CLT validity:** All four of these should be ≥ 5:
-
-$n_A \hat{p}_A$, $\;n_A(1-\hat{p}_A)$, $\;n_B \hat{p}_B$, $\;n_B(1-\hat{p}_B)$
-
-When any condition fails, the Normal approximation may be inaccurate —
-the true distribution of the difference can be skewed.
-        """)
+        st.markdown(MATHS_BINARY_BETWEEN_GROUPS)

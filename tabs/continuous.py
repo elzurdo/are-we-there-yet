@@ -16,6 +16,9 @@ from utils.decision import epitg_decision
 from utils.viz import plot_posterior_continuous, plot_posterior_difference, plot_nhst_posterior
 from utils.verdict import render_verdict_display
 from utils.nhst import nhst_test
+from utils.tutorials import (
+    NHST_LIMITATIONS, MATHS_CONTINUOUS_SINGLE_GROUP, MATHS_CONTINUOUS_BETWEEN_GROUPS,
+)
 
 
 def sidebar_inputs() -> dict:
@@ -276,27 +279,11 @@ def _render_single_group(inputs: dict):
 
             # Tutorial
             with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
-                st.markdown("""
-**Limitations of NHST (p-value) stopping criteria:**
+                st.markdown(NHST_LIMITATIONS)
 
-1. **No precision guarantee**: A p < 0.05 doesn't tell you how narrow your confidence interval is. 
-   You could have a very wide CI that still yields statistical significance.
-
-2. **Dichotomous thinking**: NHST forces a binary decision (reject/not reject) that ignores effect size. 
-   A tiny, practically meaningless difference can be "significant" with enough data.
-
-3. **No stopping rule**: Traditional NHST doesn't tell you *when* to stop collecting data. 
-   The ePitG method explicitly plans for a precision goal.
-
-4. **Ignores practical equivalence**: NHST can't distinguish between "no effect" and "effect is 
-   too small to matter." The ROPE addresses this directly.
-
-**ePitG combines:**
-- **Precision** (HDI width < Goal) — ensures your estimate is narrow enough
-- **Location** (HDI vs ROPE) — ensures you can make a conclusive decision about practical significance
-
-This gives you both statistical confidence *and* practical interpretability.
-                """)
+        # --- Maths Tutorial ---
+        with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
+            st.markdown(MATHS_CONTINUOUS_SINGLE_GROUP)
 
 # ──────────────────────────────────────────────────────────────
 # Between Groups
@@ -556,64 +543,9 @@ def _render_between_groups(inputs: dict):
 
             # Tutorial
             with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
-                st.markdown("""
-**Limitations of NHST (p-value) stopping criteria:**
+                st.markdown(NHST_LIMITATIONS)
 
-1. **No precision guarantee**: A p < 0.05 doesn't tell you how narrow your confidence interval is. 
-   You could have a very wide CI that still yields statistical significance.
-
-2. **Dichotomous thinking**: NHST forces a binary decision (reject/not reject) that ignores effect size. 
-   A tiny, practically meaningless difference can be "significant" with enough data.
-
-3. **No stopping rule**: Traditional NHST doesn't tell you *when* to stop collecting data. 
-   The ePitG method explicitly plans for a precision goal.
-
-4. **Ignores practical equivalence**: NHST can't distinguish between "no effect" and "effect is 
-   too small to matter." The ROPE addresses this directly.
-
-**ePitG combines:**
-- **Precision** (HDI width < Goal) — ensures your estimate is narrow enough
-- **Location** (HDI vs ROPE) — ensures you can make a conclusive decision about practical significance
-
-This gives you both statistical confidence *and* practical interpretability.
-                """)
-
-    # --- Tutorial ---
+    # --- Maths Tutorial ---
     with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
-        st.markdown(r"""
-**Comparing two continuous means using Welch's t-approximation**
+        st.markdown(MATHS_CONTINUOUS_BETWEEN_GROUPS)
 
-When we observe continuous outcomes in two independent groups:
-- Group A: $\bar{x}_A$, $s_A$, $n_A$
-- Group B: $\bar{x}_B$, $s_B$, $n_B$
-
-We're interested in their **difference**: $\delta = \bar{x}_A - \bar{x}_B$
-
-**Welch's t-approximation** (does *not* assume equal variances):
-
-$$\delta \;\dot\sim\; t_\nu\!\left(\bar{x}_A - \bar{x}_B,\;\; \text{SE}\right)$$
-
-where the **standard error** is:
-
-$$\text{SE} = \sqrt{\frac{s_A^2}{n_A} + \frac{s_B^2}{n_B}}$$
-
-and the **Welch–Satterthwaite degrees of freedom**:
-
-$$\nu = \frac{\left(\frac{s_A^2}{n_A} + \frac{s_B^2}{n_B}\right)^2}{\frac{\left(\frac{s_A^2}{n_A}\right)^2}{n_A - 1} + \frac{\left(\frac{s_B^2}{n_B}\right)^2}{n_B - 1}}$$
-
-**Why Welch's t instead of Normal (CLT)?**
-
-Unlike the binary case (which uses the CLT Normal approximation),
-Welch's t accounts for **uncertainty in the variance estimate**.
-This makes it more appropriate for continuous data — especially
-with smaller sample sizes — because the Student-t distribution
-has heavier tails than the Normal.
-
-**The HDI** is computed numerically on this Student-t distribution
-(it won't be perfectly symmetric if ν is small, though the
-asymmetry is usually negligible).
-
-**HDI width** is our precision measure: the ePitG algorithm
-checks whether it's below the precision goal *and* whether
-the HDI is conclusive relative to the ROPE.
-        """)
