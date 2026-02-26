@@ -473,3 +473,129 @@ def plot_bayes_factor_prior_posterior(
     
     fig.tight_layout()
     return fig
+
+
+def plot_categorical_forest(
+    comparisons: list,
+    reference_name: str,
+    rope_min: float,
+    rope_max: float,
+    decimal_places: int = 3,
+):
+    """
+    Forest plot for one-vs-rest categorical comparisons.
+    
+    Shows HDIs for all category differences vs reference category,
+    with ROPE region and color-coded verdicts.
+    
+    Parameters
+    ----------
+    comparisons : list of dict
+        Each dict contains:
+        - 'category': str, category name
+        - 'hdi_min': float
+        - 'hdi_max': float
+        - 'point_estimate': float (difference from reference)
+        - 'verdict': str (ACCEPT/REJECT/INCONCLUSIVE/NEEDS_MORE_DATA)
+        - 'color': str (color for verdict)
+    reference_name : str
+        Name of the reference category
+    rope_min : float
+        ROPE lower bound
+    rope_max : float
+        ROPE upper bound
+    decimal_places : int
+        Number of decimal places for annotations
+    
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    fmt = f".{decimal_places}f"
+    n_comparisons = len(comparisons)
+    
+    if n_comparisons == 0:
+        # Empty plot with message
+        fig, ax = plt.subplots(figsize=(10, 2))
+        ax.text(0.5, 0.5, "No comparisons to display", 
+                ha='center', va='center', fontsize=12)
+        ax.axis('off')
+        return fig
+    
+    # Create figure
+    fig_height = max(4, 1.5 + 0.6 * n_comparisons)
+    fig, ax = plt.subplots(figsize=(12, fig_height))
+    
+    # Determine x-axis range
+    all_bounds = [c['hdi_min'] for c in comparisons] + [c['hdi_max'] for c in comparisons]
+    all_bounds.extend([rope_min, rope_max, 0])
+    x_min = min(all_bounds) - 0.05 * (max(all_bounds) - min(all_bounds))
+    x_max = max(all_bounds) + 0.05 * (max(all_bounds) - min(all_bounds))
+    
+    # Plot ROPE region
+    ax.axvspan(rope_min, rope_max, alpha=0.15, color='gray', 
+               label='ROPE', zorder=0)
+    ax.axvline(rope_min, color='gray', linestyle='--', linewidth=1, alpha=0.5)
+    ax.axvline(rope_max, color='gray', linestyle='--', linewidth=1, alpha=0.5)
+    
+    # Reference line at 0
+    ax.axvline(0, color='black', linestyle='-', linewidth=1.5, alpha=0.3,
+               label=f'No difference from {reference_name}')
+    
+    # Plot each comparison
+    y_positions = list(range(n_comparisons))
+    
+    for i, comp in enumerate(comparisons):
+        y = y_positions[i]
+        hdi_min = comp['hdi_min']
+        hdi_max = comp['hdi_max']
+        point_est = comp['point_estimate']
+        category = comp['category']
+        color = comp['color']
+        
+        # Map verdict color to matplotlib color
+        color_map = {
+            'green': 'darkgreen',
+            'red': 'darkred',
+            'orange': 'darkorange',
+        }
+        plot_color = color_map.get(color, 'steelblue')
+        
+        # Plot HDI line
+        ax.plot([hdi_min, hdi_max], [y, y], 
+                linewidth=3, color=plot_color, alpha=0.7, zorder=2)
+        
+        # Plot HDI endpoints
+        ax.plot([hdi_min, hdi_max], [y, y], 
+                'o', markersize=6, color=plot_color, alpha=0.9, zorder=3)
+        
+        # Plot point estimate
+        ax.plot(point_est, y, 
+                'D', markersize=8, color=plot_color, markerfacecolor='white',
+                markeredgewidth=2, alpha=0.9, zorder=4)
+        
+        # Annotate with HDI values
+        hdi_text = f"[{hdi_min:{fmt}}, {hdi_max:{fmt}}]"
+        ax.text(x_max + 0.01 * (x_max - x_min), y, hdi_text,
+                va='center', fontsize=9, color=plot_color)
+    
+    # Set y-axis labels and limits
+    category_labels = [f"{c['category']} vs {reference_name}" for c in comparisons]
+    ax.set_yticks(y_positions)
+    ax.set_yticklabels(category_labels, fontsize=10)
+    ax.set_ylim(-0.5, n_comparisons - 0.5)
+    
+    # Set x-axis
+    ax.set_xlabel('Difference in Proportion', fontsize=12)
+    ax.set_xlim(x_min, x_max)
+    ax.grid(axis='x', alpha=0.3, linestyle=':', linewidth=0.5)
+    
+    # Title
+    ax.set_title('One-vs-Rest Categorical Comparison (Forest Plot)', 
+                 fontsize=14, fontweight='bold', pad=15)
+    
+    # Legend
+    ax.legend(loc='upper right', fontsize=9, framealpha=0.9)
+    
+    fig.tight_layout()
+    return fig

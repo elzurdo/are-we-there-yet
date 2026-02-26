@@ -4,6 +4,15 @@ Continuous variables — single-group analysis.
 The user provides summary statistics for continuous data (mean, std, n)
 and receives an ePitG stopping decision using a Student-t posterior.
 
+NOTE: For ordinal data (e.g., star ratings, Likert scales), treating as continuous
+      works well when n ≥ 30 and the distribution is roughly symmetric. For smaller
+      samples or highly skewed ordinal data, consider the Categorical tab or wait
+      for proper ordinal regression support.
+
+TODO (v2.0): Add proper ordinal variable support with cumulative link models
+             (proportional odds, probit) that respect the ordered nature of categories.
+             This would require MCMC (PyMC/Stan) as there's no analytical HDI solution.
+
 Sidebar: all inputs
 Main area: summary + verdict + plot
 """

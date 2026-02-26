@@ -293,3 +293,34 @@ def binomial_rate_ci_width_to_sample_size(p, credible_interval_width, z_star=1.9
     variance_ = (0.5 * credible_interval_width / z_star) ** 2
     n_ = p * (1 - p) / variance_ - 1
     return n_
+
+
+# ══════════════════════════════════════════════════════════════
+# TODO (v2.0): Categorical Variables - Full Dirichlet Posterior
+# ══════════════════════════════════════════════════════════════
+#
+# For proper categorical analysis with joint uncertainty:
+#
+# 1. Dirichlet conjugate posterior:
+#    - Data: counts (n₁, n₂, ..., nₖ) across k categories
+#    - Prior: Dirichlet(α₁, ..., αₖ) [e.g., uniform α=1 for all]
+#    - Posterior: Dirichlet(α₁+n₁, ..., αₖ+nₖ)
+#
+# 2. Multivariate HDI computation:
+#    - No analytical solution for Dirichlet HDI
+#    - Requires Monte Carlo sampling + convex hull algorithm
+#    - Suggested approach:
+#      a) Sample N points from Dirichlet posterior
+#      b) Compute probability density at each point
+#      c) Find threshold where mass = HDI fraction
+#      d) HDI region = {points with density > threshold}
+#
+# 3. Implementation references:
+#    - PyMC for MCMC sampling
+#    - scipy.spatial.ConvexHull for region boundary
+#    - Or use approximate region from marginal HDIs
+#
+# 4. Visualization:
+#    - Ternary plot (3 categories)
+#    - Parallel coordinates (4+ categories)
+#    - Marginal density plots for each category
