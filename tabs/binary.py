@@ -10,9 +10,9 @@ Main area: summary + verdict + plot
 import streamlit as st
 import numpy as np
 
-from utils.stats import successes_failures_to_hdi_ci_limits, CI_FRACTION
+from utils.stats import successes_failures_to_hdi_ci_limits, binary_difference_hdi, check_clt_conditions, CI_FRACTION
 from utils.decision import epitg_decision
-from utils.viz import plot_posterior_binary
+from utils.viz import plot_posterior_binary, plot_posterior_difference
 from utils.verdict import render_verdict_display
 
 
@@ -22,12 +22,14 @@ def sidebar_inputs() -> dict:
     # --- Sub-mode (single group now; A/B test later) ---
     analysis_mode = st.sidebar.radio(
         "Analysis",
-        ["Single Group"],
+        ["Single Group", "Between Groups"],
         key="binary_analysis_mode",
     )
 
     if analysis_mode == "Single Group":
         return _sidebar_single_group()
+    elif analysis_mode == "Between Groups":
+        return _sidebar_between_groups()
 
     return {}
 
@@ -133,6 +135,7 @@ def _sidebar_single_group() -> dict:
         )
 
     return {
+        "analysis_mode": "Single Group",
         "successes": successes,
         "failures": failures,
         "total": total,
@@ -152,6 +155,17 @@ def render_results(inputs: dict):
 
     if not inputs:
         return
+
+    analysis_mode = inputs.get("analysis_mode", "Single Group")
+
+    if analysis_mode == "Between Groups":
+        _render_between_groups(inputs)
+    else:
+        _render_single_group(inputs)
+
+
+def _render_single_group(inputs: dict):
+    """Render results for single-group binary analysis."""
 
     successes = inputs["successes"]
     failures = inputs["failures"]
@@ -238,3 +252,291 @@ def render_results(inputs: dict):
         # --- Plot ---
         fig = plot_posterior_binary(result, successes=a, failures=b, decimal_places=dp)
         st.pyplot(fig)
+
+
+# ──────────────────────────────────────────────────────────────
+# Between Groups
+# ──────────────────────────────────────────────────────────────
+
+def _sidebar_group_inputs(label: str, key_prefix: str) -> dict:
+    """Reusable sidebar inputs for a single group (A or B)."""
+
+    st.sidebar.markdown(f"#### {label}")
+
+    input_mode = st.sidebar.radio(
+        "Input format",
+        ["Successes & Total", "Successes & Failures", "Success % & Total"],
+        horizontal=True,
+        key=f"{key_prefix}_input_mode",
+    )
+
+    if input_mode == "Successes & Total":
+        total = st.sidebar.number_input(
+            "Total trials", min_value=2, value=100, step=1, key=f"{key_prefix}_total",
+        )
+        successes = st.sidebar.number_input(
+            "Successes", min_value=0, max_value=total, value=50, step=1,
+            key=f"{key_prefix}_successes",
+        )
+        failures = total - successes
+    elif input_mode == "Success % & Total":
+        total = st.sidebar.number_input(
+            "Total trials", min_value=2, value=100, step=1, key=f"{key_prefix}_total_pct",
+        )
+        success_pct = st.sidebar.number_input(
+            "Success %", min_value=0.0, max_value=100.0, value=50.0, step=0.1,
+            format="%.1f", key=f"{key_prefix}_success_pct",
+        )
+        successes = int(round(success_pct / 100.0 * total))
+        failures = total - successes
+    else:
+        successes = st.sidebar.number_input(
+            "Successes", min_value=0, value=50, step=1, key=f"{key_prefix}_successes_sf",
+        )
+        failures = st.sidebar.number_input(
+            "Failures", min_value=0, value=50, step=1, key=f"{key_prefix}_failures_sf",
+        )
+        total = successes + failures
+
+    return {"successes": successes, "failures": failures, "total": total}
+
+
+def _sidebar_between_groups() -> dict:
+    """Sidebar inputs for between-groups binary comparison."""
+
+    st.sidebar.markdown("### 📊 Data")
+
+    group_a = _sidebar_group_inputs("Group A", "bg_a")
+    group_b = _sidebar_group_inputs("Group B", "bg_b")
+
+    st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
+
+    theta_null = st.sidebar.number_input(
+        "Null hypothesis (δ₀ = p_A − p_B)", min_value=-1.0, max_value=1.0,
+        value=0.0, step=0.01, format="%.4f", key="bg_theta_null",
+    )
+
+    rope_mode = st.sidebar.radio(
+        "ROPE specification",
+        ["Full width (symmetric)", "Explicit min / max"],
+        horizontal=True,
+        key="bg_rope_mode",
+    )
+
+    if rope_mode == "Full width (symmetric)":
+        rope_width = st.sidebar.number_input(
+            "ROPE width (Δ_ROPE)", min_value=0.001, max_value=2.0,
+            value=0.10, step=0.01, format="%.3f", key="bg_rope_width",
+        )
+        rope_min = theta_null - rope_width / 2
+        rope_max = theta_null + rope_width / 2
+    else:
+        rope_min = st.sidebar.number_input(
+            "ROPE min", min_value=-1.0, max_value=1.0,
+            value=-0.05, step=0.01, format="%.4f", key="bg_rope_min",
+        )
+        rope_max = st.sidebar.number_input(
+            "ROPE max", min_value=-1.0, max_value=1.0,
+            value=0.05, step=0.01, format="%.4f", key="bg_rope_max",
+        )
+        rope_width = rope_max - rope_min
+
+    st.sidebar.markdown("### 🔬 Precision Goal")
+
+    precision_goal = st.sidebar.number_input(
+        "Goal (target HDI width)",
+        min_value=0.001, max_value=2.0,
+        value=0.08, step=0.01, format="%.3f", key="bg_precision_goal",
+        help="Must be narrower than the ROPE width for the method to work.",
+    )
+
+    ci_fraction = CI_FRACTION
+    decimal_places = 3
+    verdict_style = "Centered text"
+    with st.sidebar.expander("⚙️ Advanced"):
+        ci_fraction = st.slider(
+            "HDI mass", min_value=0.80, max_value=0.99,
+            value=CI_FRACTION, step=0.01, format="%.2f",
+            key="bg_ci_fraction",
+        )
+        decimal_places = st.number_input(
+            "Decimal places", min_value=1, max_value=10,
+            value=3, step=1, key="bg_decimal_places",
+        )
+        verdict_style = st.radio(
+            "Verdict display style",
+            ["Centered text", "Info/Warning box"],
+            key="bg_verdict_style",
+        )
+
+    return {
+        "analysis_mode": "Between Groups",
+        "group_a": group_a,
+        "group_b": group_b,
+        "theta_null": theta_null,
+        "rope_min": rope_min,
+        "rope_max": rope_max,
+        "rope_width": rope_width,
+        "precision_goal": precision_goal,
+        "ci_fraction": ci_fraction,
+        "decimal_places": decimal_places,
+        "verdict_style": verdict_style,
+    }
+
+
+def _render_between_groups(inputs: dict):
+    """Render results for between-groups binary comparison."""
+
+    group_a = inputs["group_a"]
+    group_b = inputs["group_b"]
+    rope_min = inputs["rope_min"]
+    rope_max = inputs["rope_max"]
+    rope_width = inputs["rope_width"]
+    precision_goal = inputs["precision_goal"]
+    ci_fraction = inputs["ci_fraction"]
+    dp = inputs["decimal_places"]
+    verdict_style = inputs["verdict_style"]
+    fmt = f".{dp}f"
+
+    n_a, s_a = group_a["total"], group_a["successes"]
+    n_b, s_b = group_b["total"], group_b["successes"]
+
+    # --- Validation ---
+    if n_a < 2 or n_b < 2:
+        st.warning("Each group needs at least 2 observations.")
+        return
+    if rope_min >= rope_max:
+        st.warning("ROPE min must be less than ROPE max.")
+        return
+    if precision_goal >= rope_width:
+        st.warning("Precision goal must be narrower than the ROPE width.")
+        return
+
+    p_a = s_a / n_a if n_a > 0 else 0.0
+    p_b = s_b / n_b if n_b > 0 else 0.0
+    delta = p_a - p_b
+    se = np.sqrt(p_a * (1 - p_a) / n_a + p_b * (1 - p_b) / n_b)
+
+    # --- CLT validity check ---
+    conditions = check_clt_conditions(p_a, n_a, p_b, n_b)
+    all_pass = all(c["passed"] for c in conditions)
+
+    if not all_pass:
+        st.warning("⚠️ **CLT approximation may be unreliable**")
+        cond_table = "| Condition | Value | Status |\n|-----------|------:|--------|\n"
+        for c in conditions:
+            status = "✅" if c["passed"] else "❌"
+            cond_table += f"| {c['label']} ≥ 5 | {c['value']:.1f} | {status} |\n"
+        st.markdown(cond_table)
+
+    # --- Input summary ---
+    st.markdown("#### Binary — Between Groups")
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown(
+            f"**Group A**  \n"
+            f"{s_a} successes / {n_a} total  \n"
+            f"Rate = {p_a:{fmt}}"
+        )
+    with col_b:
+        st.markdown(
+            f"**Group B**  \n"
+            f"{s_b} successes / {n_b} total  \n"
+            f"Rate = {p_b:{fmt}}"
+        )
+
+    col_s1, col_s2, col_s3 = st.columns(3)
+    with col_s1:
+        st.markdown(
+            f"**Difference (δ)**  \n"
+            f"p̂_A − p̂_B = {delta:{fmt}}  \n"
+            f"SE = {se:{fmt}}"
+        )
+    with col_s2:
+        st.markdown(
+            f"**ROPE**  \n"
+            f"[{rope_min:{fmt}}, {rope_max:{fmt}}]  \n"
+            f"Width = {rope_width:{fmt}}"
+        )
+    with col_s3:
+        st.markdown(
+            f"**Precision Goal**  \n"
+            f"{precision_goal:{fmt}}  \n"
+            f"HDI mass = {ci_fraction:.0%}"
+        )
+
+    # --- Compute ---
+    hdi_min, hdi_max = binary_difference_hdi(p_a, n_a, p_b, n_b, ci_fraction=ci_fraction)
+
+    result = epitg_decision(
+        hdi_min=hdi_min,
+        hdi_max=hdi_max,
+        rope_min=rope_min,
+        rope_max=rope_max,
+        precision_goal=precision_goal,
+        point_estimate=delta,
+        ci_fraction=ci_fraction,
+    )
+
+    # --- Verdict ---
+    st.divider()
+    render_verdict_display(result, precision_goal, fmt, verdict_style)
+
+    with st.expander("Let Me Peek! 👀", expanded=False):
+        col_m1, col_m2, col_m3 = st.columns(3)
+        with col_m1:
+            st.metric("HDI width", f"{result.hdi_width:{fmt}}",
+                       delta=f"Goal: {precision_goal:{fmt}}",
+                       delta_color="normal" if result.precision_met else "inverse")
+        with col_m2:
+            st.metric("HDI", f"[{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]")
+        with col_m3:
+            st.metric("Difference (δ)", f"{delta:{fmt}}")
+
+        # --- Plot ---
+        fig = plot_posterior_difference(result, delta=delta, se=se, decimal_places=dp)
+        st.pyplot(fig)
+
+    # --- Tutorial ---
+    with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
+        st.markdown(r"""
+**Comparing two proportions using the Central Limit Theorem**
+
+When we observe binary outcomes in two independent groups:
+- Group A: $\hat{p}_A = s_A / n_A$
+- Group B: $\hat{p}_B = s_B / n_B$
+
+We're interested in their **difference**: $\delta = \hat{p}_A - \hat{p}_B$
+
+**By the CLT**, each proportion is approximately Normal for large enough samples:
+
+$$\hat{p}_i \;\dot\sim\; N\!\left(p_i,\; \frac{p_i(1 - p_i)}{n_i}\right)$$
+
+Since the groups are independent, the difference is also Normal:
+
+$$\delta \;\dot\sim\; N\!\left(\hat{p}_A - \hat{p}_B,\;\; \text{SE}^2\right)$$
+
+where the **standard error** is:
+
+$$\text{SE} = \sqrt{\frac{\hat{p}_A(1 - \hat{p}_A)}{n_A} + \frac{\hat{p}_B(1 - \hat{p}_B)}{n_B}}$$
+
+**The HDI** (Highest Density Interval) for a Normal distribution is symmetric:
+
+$$\text{HDI} = \delta \pm z_{\alpha/2} \cdot \text{SE}$$
+
+where $z_{\alpha/2} = \Phi^{-1}\!\left(\frac{1 + \text{HDI mass}}{2}\right)$
+
+**HDI width** (our precision measure):
+
+$$\text{HDI width} = 2 \cdot z_{\alpha/2} \cdot \text{SE}$$
+
+---
+
+**Rule of thumb for CLT validity:** All four of these should be ≥ 5:
+
+$n_A \hat{p}_A$, $\;n_A(1-\hat{p}_A)$, $\;n_B \hat{p}_B$, $\;n_B(1-\hat{p}_B)$
+
+When any condition fails, the Normal approximation may be inaccurate —
+the true distribution of the difference can be skewed.
+        """)

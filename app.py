@@ -17,9 +17,10 @@ st.set_page_config(
 
 from tabs import binary, continuous
 
+caption_str = "Sequential HypothesisTesting Advisor"
 # ── Sidebar ──────────────────────────────────────────────────────────
 st.sidebar.title("🚗 Are We There Yet?")
-st.sidebar.caption("Sequential Testing Advisor")
+st.sidebar.caption(caption_str)
 
 variable_type = st.sidebar.radio(
     "Variable type",
@@ -37,7 +38,7 @@ else:
 
 # ── Main area ────────────────────────────────────────────────────────
 st.title("Are We There Yet? 🚗")
-st.caption("Enhanced Precision is the Goal (ePitG)  •  Sequential Testing Advisor")
+st.caption(caption_str)
 
 if variable_type == "Binary":
     binary.render_results(inputs)

@@ -74,7 +74,42 @@ def plot_posterior_continuous(result: DecisionResult, sample_mean: float,
     return _plot_posterior(x, y, result, decimal_places=decimal_places)
 
 
-def _plot_posterior(x, y, result: DecisionResult, x_bounds=None, decimal_places: int = 3):
+def plot_posterior_difference(result: DecisionResult, delta: float, se: float,
+                              decimal_places: int = 3):
+    """
+    Plot the Normal posterior of the difference δ = p_A - p_B with HDI and ROPE.
+
+    Parameters
+    ----------
+    result : DecisionResult
+        The ePitG decision output.
+    delta : float
+        Observed difference (p_A - p_B).
+    se : float
+        Standard error of the difference.
+    decimal_places : int
+        Number of decimal places for display.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    from scipy.stats import norm
+
+    dist = norm(loc=delta, scale=se)
+
+    # x range
+    margin = 4 * se
+    x_min = min(result.rope_min, result.hdi_min) - margin
+    x_max = max(result.rope_max, result.hdi_max) + margin
+    x = np.linspace(x_min, x_max, 1000)
+    y = dist.pdf(x)
+
+    return _plot_posterior(x, y, result, decimal_places=decimal_places, x_label="δ (difference)")
+
+
+def _plot_posterior(x, y, result: DecisionResult, x_bounds=None, decimal_places: int = 3,
+                    x_label: str = "θ"):
     """
     Core plotting logic shared by binary and continuous posteriors.
 
@@ -135,7 +170,7 @@ def _plot_posterior(x, y, result: DecisionResult, x_bounds=None, decimal_places:
     ax.set_title(verdict_text, fontsize=14, fontweight="bold",
                  color=display["color"])
 
-    ax.set_xlabel("θ", fontsize=12)
+    ax.set_xlabel(x_label, fontsize=12)
     ax.set_ylabel("Density", fontsize=12)
     ax.legend(loc="upper right", fontsize=9)
 
