@@ -108,6 +108,61 @@ def plot_posterior_difference(result: DecisionResult, delta: float, se: float,
     return _plot_posterior(x, y, result, decimal_places=decimal_places, x_label="δ (difference)")
 
 
+def plot_two_beta_posteriors(a1, b1, a2, b2, overlap, decimal_places: int = 3):
+    """
+    Plot two Beta posteriors on the same axes with overlap shading.
+
+    Parameters
+    ----------
+    a1, b1 : float
+        Alpha and beta parameters for Group A posterior.
+    a2, b2 : float
+        Alpha and beta parameters for Group B posterior.
+    overlap : float
+        Pre-computed overlap coefficient (displayed in title).
+    decimal_places : int
+        Number of decimal places for annotations.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    fmt = f".{decimal_places}f"
+
+    dist_a = beta(a1, b1)
+    dist_b = beta(a2, b2)
+
+    # x range: cover both distributions
+    mean_a, mean_b = a1 / (a1 + b1), a2 / (a2 + b2)
+    x_lo = max(0, min(dist_a.ppf(0.001), dist_b.ppf(0.001)))
+    x_hi = min(1, max(dist_a.ppf(0.999), dist_b.ppf(0.999)))
+    x = np.linspace(x_lo, x_hi, 1000)
+    y_a = dist_a.pdf(x)
+    y_b = dist_b.pdf(x)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    # Plot both PDFs
+    ax.plot(x, y_a, color="steelblue", linewidth=2, label=f"Group A (p̂={mean_a:{fmt}})")
+    ax.plot(x, y_b, color="darkorange", linewidth=2, label=f"Group B (p̂={mean_b:{fmt}})")
+
+    # Shade overlap region
+    y_min = np.minimum(y_a, y_b)
+    ax.fill_between(x, y_min, alpha=0.25, color="mediumpurple", label=f"Overlap = {overlap:{fmt}}")
+
+    # Light shading for each distribution
+    ax.fill_between(x, y_a, alpha=0.08, color="steelblue")
+    ax.fill_between(x, y_b, alpha=0.08, color="darkorange")
+
+    ax.set_title(f"Individual Group Posteriors  —  Overlap = {overlap:{fmt}}", fontsize=13)
+    ax.set_xlabel("θ", fontsize=12)
+    ax.set_ylabel("Density", fontsize=12)
+    ax.legend(loc="upper right", fontsize=9)
+    ax.set_yticks([])
+    fig.tight_layout()
+    return fig
+
+
 def _plot_posterior(x, y, result: DecisionResult, x_bounds=None, decimal_places: int = 3,
                     x_label: str = "θ"):
     """

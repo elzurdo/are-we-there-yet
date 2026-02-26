@@ -105,6 +105,37 @@ def continuous_hdi_ci_limits(sample_mean, sample_std, n, ci_fraction=CI_FRACTION
     return HDIofICDF(student_t, df=df, loc=sample_mean, scale=se, ci_fraction=ci_fraction)
 
 
+def beta_overlap(a1, b1, a2, b2, n_points=2000):
+    """
+    Compute the overlap coefficient between two Beta distributions.
+
+    OVL = ∫₀¹ min(f₁(x), f₂(x)) dx
+
+    Returns a value in [0, 1]:
+    - 0 means no overlap (distributions are completely separated)
+    - 1 means identical distributions
+
+    Parameters
+    ----------
+    a1, b1 : float
+        Alpha and beta parameters of the first Beta distribution.
+    a2, b2 : float
+        Alpha and beta parameters of the second Beta distribution.
+    n_points : int
+        Number of grid points for numerical integration (default 2000).
+
+    Returns
+    -------
+    float
+        Overlap coefficient in [0, 1].
+    """
+    x = np.linspace(0, 1, n_points)
+    pdf1 = beta(a1, b1).pdf(x)
+    pdf2 = beta(a2, b2).pdf(x)
+    overlap = np.trapz(np.minimum(pdf1, pdf2), x)
+    return float(overlap)
+
+
 def binary_difference_hdi(p_a, n_a, p_b, n_b, ci_fraction=CI_FRACTION):
     """
     Compute the HDI for the difference δ = p_A - p_B using the CLT approximation.

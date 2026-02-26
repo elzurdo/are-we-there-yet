@@ -10,9 +10,12 @@ Main area: summary + verdict + plot
 import streamlit as st
 import numpy as np
 
-from utils.stats import successes_failures_to_hdi_ci_limits, binary_difference_hdi, check_clt_conditions, CI_FRACTION
+from utils.stats import (
+    successes_failures_to_hdi_ci_limits, binary_difference_hdi,
+    check_clt_conditions, beta_overlap, CI_FRACTION,
+)
 from utils.decision import epitg_decision
-from utils.viz import plot_posterior_binary, plot_posterior_difference
+from utils.viz import plot_posterior_binary, plot_posterior_difference, plot_two_beta_posteriors
 from utils.verdict import render_verdict_display
 
 
@@ -494,9 +497,23 @@ def _render_between_groups(inputs: dict):
         with col_m3:
             st.metric("Difference (δ)", f"{delta:{fmt}}")
 
-        # --- Plot ---
+        # --- Difference posterior plot ---
+        st.markdown("##### Posterior of Difference (δ)")
         fig = plot_posterior_difference(result, delta=delta, se=se, decimal_places=dp)
         st.pyplot(fig)
+
+        # --- Individual group posteriors ---
+        st.markdown("##### Individual Group Posteriors")
+        a_a, b_a = max(s_a, 1), max(n_a - s_a, 1)
+        a_b, b_b = max(s_b, 1), max(n_b - s_b, 1)
+        overlap = beta_overlap(a_a, b_a, a_b, b_b)
+
+        col_ov, _ = st.columns([1, 2])
+        with col_ov:
+            st.metric("Posterior Overlap", f"{overlap:{fmt}}")
+
+        fig2 = plot_two_beta_posteriors(a_a, b_a, a_b, b_b, overlap=overlap, decimal_places=dp)
+        st.pyplot(fig2)
 
     # --- Tutorial ---
     with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
