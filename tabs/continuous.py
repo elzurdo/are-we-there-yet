@@ -277,8 +277,6 @@ def _render_single_group(inputs: dict):
                 )
                 st.pyplot(fig_nhst)
 
-            # Tutorial
-            with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
                 st.markdown(NHST_LIMITATIONS)
 
     # --- Maths Tutorial ---

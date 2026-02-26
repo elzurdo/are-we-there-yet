@@ -18,8 +18,13 @@ from utils.decision import epitg_decision
 from utils.viz import plot_posterior_binary, plot_posterior_difference, plot_two_beta_posteriors, plot_nhst_posterior
 from utils.verdict import render_verdict_display
 from utils.nhst import nhst_test
+from utils.bayes_factor import (
+    binary_single_group_bayes_factor, PRIOR_SPECS,
+    interpret_bayes_factor_jeffreys, interpret_bayes_factor_kass_raftery,
+)
 from utils.tutorials import (
     NHST_LIMITATIONS, MATHS_BINARY_SINGLE_GROUP, MATHS_BINARY_BETWEEN_GROUPS,
+    BAYES_FACTOR_INTRO, BAYES_FACTOR_INTERPRETATION,
 )
 
 
@@ -262,7 +267,7 @@ def _render_single_group(inputs: dict):
 
         # --- Alternative Methods ---
         with st.expander("⚖️ Alternative Methods", expanded=False):
-            tab_nhst, = st.tabs(["NHST (p-value)"])
+            tab_nhst, tab_bf = st.tabs(["NHST (p-value)", "Bayes Factor"])
 
             with tab_nhst:
                 alpha = st.slider(
@@ -305,9 +310,66 @@ def _render_single_group(inputs: dict):
                 )
                 st.pyplot(fig_nhst)
 
-            # Tutorial
-            with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
                 st.markdown(NHST_LIMITATIONS)
+
+            with tab_bf:
+                st.markdown(BAYES_FACTOR_INTRO)
+
+                # Prior selection
+                col_p1, col_p2 = st.columns([1, 2])
+                with col_p1:
+                    prior_choice = st.selectbox(
+                        "Prior for H₁",
+                        options=list(PRIOR_SPECS.keys()),
+                        format_func=lambda x: x.replace("_", " ").title(),
+                        key="binary_sg_bf_prior"
+                    )
+                with col_p2:
+                    st.caption(PRIOR_SPECS[prior_choice]["description"])
+
+                # Interpretation scale
+                interp_scale = st.radio(
+                    "Interpretation scale",
+                    options=["jeffreys", "kass_raftery"],
+                    format_func=lambda x: "Jeffreys (1961)" if x == "jeffreys" else "Kass & Raftery (1995)",
+                    horizontal=True,
+                    key="binary_sg_bf_scale"
+                )
+
+                # Compute Bayes Factor
+                prior_alpha = PRIOR_SPECS[prior_choice]["alpha"]
+                prior_beta = PRIOR_SPECS[prior_choice]["beta"]
+                theta_null = inputs["theta_null"]
+
+                bf10 = binary_single_group_bayes_factor(
+                    successes=a,
+                    n=total,
+                    theta_null=theta_null,
+                    prior_alpha=prior_alpha,
+                    prior_beta=prior_beta,
+                )
+
+                # Interpret
+                if interp_scale == "jeffreys":
+                    category, emoji = interpret_bayes_factor_jeffreys(bf10)
+                else:
+                    category, emoji = interpret_bayes_factor_kass_raftery(bf10)
+
+                # Display
+                col_b1, col_b2 = st.columns(2)
+                with col_b1:
+                    st.metric("BF₁₀", f"{bf10:.3f}")
+                with col_b2:
+                    st.metric("Interpretation", f"{emoji} {category}")
+
+                # Optional: show BF₀₁
+                bf01 = 1 / bf10
+                st.caption(f"BF₀₁ (evidence for H₀) = {bf01:.3f}")
+
+                st.markdown(BAYES_FACTOR_INTERPRETATION)
+
+
+                
 
     # --- Maths Tutorial ---
     with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):

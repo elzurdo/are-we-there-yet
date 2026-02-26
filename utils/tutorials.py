@@ -178,3 +178,29 @@ asymmetry is usually negligible).
 checks whether it's below the precision goal *and* whether
 the HDI is conclusive relative to the ROPE.
 """
+
+
+# ──────────────────────────────────────────────────────────────
+# Bayes Factor: Explanations
+# ──────────────────────────────────────────────────────────────
+
+BAYES_FACTOR_INTRO = """
+**Bayes Factor (BF₁₀)** quantifies the relative evidence for two hypotheses:
+- **H₀**: θ = null value (point hypothesis)
+- **H₁**: θ ~ Beta(α, β) (prior distribution)
+
+BF₁₀ = P(data | H₁) / P(data | H₀)
+"""
+
+BAYES_FACTOR_INTERPRETATION = """
+**Interpretation:**
+- **BF₁₀ > 1**: Data favor H₁ (effect exists)
+- **BF₁₀ < 1**: Data favor H₀ (no effect, or BF₀₁ > 1)
+- **BF₁₀ ≈ 1**: Data are uninformative
+
+**Key differences from ePitG:**
+- BF requires specifying a prior under H₁ (subjective)
+- BF doesn't directly measure precision (HDI width)
+- BF grows indefinitely with sample size, even for tiny effects
+- BF compares *relative evidence*, not practical significance (ROPE)
+"""
