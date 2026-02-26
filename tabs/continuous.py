@@ -281,9 +281,9 @@ def _render_single_group(inputs: dict):
             with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
                 st.markdown(NHST_LIMITATIONS)
 
-        # --- Maths Tutorial ---
-        with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
-            st.markdown(MATHS_CONTINUOUS_SINGLE_GROUP)
+    # --- Maths Tutorial ---
+    with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
+        st.markdown(MATHS_CONTINUOUS_SINGLE_GROUP)
 
 # ──────────────────────────────────────────────────────────────
 # Between Groups
