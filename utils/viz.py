@@ -168,6 +168,106 @@ def plot_two_beta_posteriors(a1, b1, a2, b2, overlap, decimal_places: int = 3):
     return fig
 
 
+def plot_nhst_posterior(
+    observed: float,
+    null_value: float,
+    se: float,
+    test_stat: float,
+    p_value: float,
+    dist=None,
+    x_label: str = "θ",
+    decimal_places: int = 3,
+):
+    """
+    Plot posterior/sampling distribution with color-coded p-value tail regions.
+
+    Parameters
+    ----------
+    observed : float
+        Observed statistic.
+    null_value : float
+        Null hypothesis value.
+    se : float
+        Standard error.
+    test_stat : float
+        z or t statistic.
+    p_value : float
+        Two-tailed p-value.
+    dist : scipy.stats frozen distribution, optional
+        The distribution to plot. If None, uses Normal(null_value, se).
+    x_label : str
+        X-axis label (default "θ").
+    decimal_places : int
+        Number of decimal places for annotations.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    from scipy.stats import norm
+
+    fmt = f".{decimal_places}f"
+
+    if dist is None:
+        dist = norm(loc=null_value, scale=se)
+
+    # X range: center on null, extend to show tails
+    margin = 4 * se
+    x_min = null_value - margin
+    x_max = null_value + margin
+    x = np.linspace(x_min, x_max, 1000)
+    y = dist.pdf(x)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    # Plot PDF
+    ax.plot(x, y, color="steelblue", linewidth=2)
+
+    # Shade tail regions (p-value areas) in red
+    # Compute critical value: how far from null is the observed?
+    distance = abs(observed - null_value)
+    left_tail = null_value - distance
+    right_tail = null_value + distance
+
+    # Left tail
+    left_mask = x <= left_tail
+    ax.fill_between(x, y, where=left_mask, alpha=0.3, color="salmon",
+                    label=f"p-value tails")
+
+    # Right tail
+    right_mask = x >= right_tail
+    ax.fill_between(x, y, where=right_mask, alpha=0.3, color="salmon")
+
+    # Main body (non-tail region)
+    body_mask = (x > left_tail) & (x < right_tail)
+    ax.fill_between(x, y, where=body_mask, alpha=0.15, color="steelblue")
+
+    # Null hypothesis line
+    ax.axvline(null_value, color="gray", linestyle="--", linewidth=1.5,
+               alpha=0.7, label=f"H₀: {x_label} = {null_value:{fmt}}")
+
+    # Observed value line
+    ax.axvline(observed, color="darkred", linestyle="-", linewidth=2,
+               alpha=0.8, label=f"Observed = {observed:{fmt}}")
+
+    # Annotations
+    stat_label = "z" if hasattr(dist, "cdf") and dist.dist.name == "norm" else "t"
+    ax.annotate(
+        f"{stat_label} = {test_stat:{fmt}}\np = {p_value:.4f}",
+        xy=(0.98, 0.95), xycoords="axes fraction",
+        fontsize=10, verticalalignment="top", horizontalalignment="right",
+        bbox=dict(boxstyle="round,pad=0.5", facecolor="white", alpha=0.8)
+    )
+
+    ax.set_title("NHST: Sampling Distribution Under H₀", fontsize=13)
+    ax.set_xlabel(x_label, fontsize=12)
+    ax.set_ylabel("Density", fontsize=12)
+    ax.legend(loc="upper left", fontsize=9)
+    ax.set_yticks([])
+    fig.tight_layout()
+    return fig
+
+
 def _plot_posterior(x, y, result: DecisionResult, x_bounds=None, decimal_places: int = 3,
                     x_label: str = "θ"):
     """

@@ -15,8 +15,9 @@ from utils.stats import (
     check_clt_conditions, beta_overlap, CI_FRACTION,
 )
 from utils.decision import epitg_decision
-from utils.viz import plot_posterior_binary, plot_posterior_difference, plot_two_beta_posteriors
+from utils.viz import plot_posterior_binary, plot_posterior_difference, plot_two_beta_posteriors, plot_nhst_posterior
 from utils.verdict import render_verdict_display
+from utils.nhst import nhst_test
 
 
 def sidebar_inputs() -> dict:
@@ -256,6 +257,74 @@ def _render_single_group(inputs: dict):
         fig = plot_posterior_binary(result, successes=a, failures=b, decimal_places=dp)
         st.pyplot(fig)
 
+        # --- Alternative Methods ---
+        with st.expander("⚖️ Alternative Methods", expanded=False):
+            tab_nhst, = st.tabs(["NHST (p-value)"])
+
+            with tab_nhst:
+                alpha = st.slider(
+                    "Significance level (α)", min_value=0.01, max_value=0.10,
+                    value=0.05, step=0.01, format="%.2f", key="binary_sg_alpha"
+                )
+
+                # Compute NHST for single proportion
+                theta_null = inputs["theta_null"]
+                se_null = np.sqrt(theta_null * (1 - theta_null) / total)
+                test_stat, p_val, decision = nhst_test(
+                    observed=observed_rate,
+                    null_value=theta_null,
+                    se=se_null,
+                    test_type="z"
+                )
+
+                col_n1, col_n2, col_n3 = st.columns(3)
+                with col_n1:
+                    st.metric("z-statistic", f"{test_stat:{fmt}}")
+                with col_n2:
+                    st.metric("p-value", f"{p_val:.4f}")
+                with col_n3:
+                    color = "🔴" if p_val < alpha else "🟢"
+                    decision_at_alpha = "Reject H₀" if p_val < alpha else "Fail to Reject H₀"
+                    st.metric(f"Decision (α={alpha:.2f})", f"{color} {decision_at_alpha}")
+
+                # NHST plot
+                from scipy.stats import norm
+                dist_null = norm(loc=theta_null, scale=se_null)
+                fig_nhst = plot_nhst_posterior(
+                    observed=observed_rate,
+                    null_value=theta_null,
+                    se=se_null,
+                    test_stat=test_stat,
+                    p_value=p_val,
+                    dist=dist_null,
+                    x_label="p",
+                    decimal_places=dp
+                )
+                st.pyplot(fig_nhst)
+
+            # Tutorial
+            with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
+                st.markdown("""
+**Limitations of NHST (p-value) stopping criteria:**
+
+1. **No precision guarantee**: A p < 0.05 doesn't tell you how narrow your confidence interval is. 
+   You could have a very wide CI that still yields statistical significance.
+
+2. **Dichotomous thinking**: NHST forces a binary decision (reject/not reject) that ignores effect size. 
+   A tiny, practically meaningless difference can be "significant" with enough data.
+
+3. **No stopping rule**: Traditional NHST doesn't tell you *when* to stop collecting data. 
+   The ePitG method explicitly plans for a precision goal.
+
+4. **Ignores practical equivalence**: NHST can't distinguish between "no effect" and "effect is 
+   too small to matter." The ROPE addresses this directly.
+
+**ePitG combines:**
+- **Precision** (HDI width < Goal) — ensures your estimate is narrow enough
+- **Location** (HDI vs ROPE) — ensures you can make a conclusive decision about practical significance
+
+This gives you both statistical confidence *and* practical interpretability.
+                """)
 
 # ──────────────────────────────────────────────────────────────
 # Between Groups
@@ -514,6 +583,74 @@ def _render_between_groups(inputs: dict):
 
         fig2 = plot_two_beta_posteriors(a_a, b_a, a_b, b_b, overlap=overlap, decimal_places=dp)
         st.pyplot(fig2)
+
+        # --- Alternative Methods ---
+        with st.expander("⚖️ Alternative Methods", expanded=False):
+            tab_nhst, = st.tabs(["NHST (p-value)"])
+
+            with tab_nhst:
+                alpha = st.slider(
+                    "Significance level (α)", min_value=0.01, max_value=0.10,
+                    value=0.05, step=0.01, format="%.2f", key="binary_bg_alpha"
+                )
+
+                # Compute NHST for difference in proportions
+                theta_null = inputs["theta_null"]
+                test_stat, p_val, decision = nhst_test(
+                    observed=delta,
+                    null_value=theta_null,
+                    se=se,
+                    test_type="z"
+                )
+
+                col_n1, col_n2, col_n3 = st.columns(3)
+                with col_n1:
+                    st.metric("z-statistic", f"{test_stat:{fmt}}")
+                with col_n2:
+                    st.metric("p-value", f"{p_val:.4f}")
+                with col_n3:
+                    color = "🔴" if p_val < alpha else "🟢"
+                    decision_at_alpha = "Reject H₀" if p_val < alpha else "Fail to Reject H₀"
+                    st.metric(f"Decision (α={alpha:.2f})", f"{color} {decision_at_alpha}")
+
+                # NHST plot
+                from scipy.stats import norm
+                dist_null = norm(loc=theta_null, scale=se)
+                fig_nhst = plot_nhst_posterior(
+                    observed=delta,
+                    null_value=theta_null,
+                    se=se,
+                    test_stat=test_stat,
+                    p_value=p_val,
+                    dist=dist_null,
+                    x_label="δ",
+                    decimal_places=dp
+                )
+                st.pyplot(fig_nhst)
+
+            # Tutorial
+            with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
+                st.markdown("""
+**Limitations of NHST (p-value) stopping criteria:**
+
+1. **No precision guarantee**: A p < 0.05 doesn't tell you how narrow your confidence interval is. 
+   You could have a very wide CI that still yields statistical significance.
+
+2. **Dichotomous thinking**: NHST forces a binary decision (reject/not reject) that ignores effect size. 
+   A tiny, practically meaningless difference can be "significant" with enough data.
+
+3. **No stopping rule**: Traditional NHST doesn't tell you *when* to stop collecting data. 
+   The ePitG method explicitly plans for a precision goal.
+
+4. **Ignores practical equivalence**: NHST can't distinguish between "no effect" and "effect is 
+   too small to matter." The ROPE addresses this directly.
+
+**ePitG combines:**
+- **Precision** (HDI width < Goal) — ensures your estimate is narrow enough
+- **Location** (HDI vs ROPE) — ensures you can make a conclusive decision about practical significance
+
+This gives you both statistical confidence *and* practical interpretability.
+                """)
 
     # --- Tutorial ---
     with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
