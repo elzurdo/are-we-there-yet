@@ -40,14 +40,14 @@ DECISION_DISPLAY = {
     },
     Decision.INCONCLUSIVE: {
         "emoji": "⏳",
-        "label": "Keep Collecting",
+        "label": "Precision Met but Inconclusive: Keep Collecting",
         "color": "orange",
         "message": "Precision goal reached, but the HDI straddles the ROPE boundary. Keep collecting data for a conclusive result.",
     },
     Decision.NEEDS_MORE_DATA: {
-        "emoji": "👀",
-        "label": "Let me Peek!",
-        "color": "blue",
+        "emoji": "⏳",  #"👀",
+        "label": "Precision not Met: Needs more data",
+        "color": "orange",
         "message": "Whoa there, eager beaver! 🦫 Your precision goal hasn't been met yet. Here's a sneak peek at where things stand — but no peeking-induced decisions, okay?",
     },
 }

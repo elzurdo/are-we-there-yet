@@ -9,7 +9,8 @@ from scipy.stats import beta, t as student_t
 from utils.decision import DecisionResult, DECISION_DISPLAY
 
 
-def plot_posterior_binary(result: DecisionResult, successes: float, failures: float):
+def plot_posterior_binary(result: DecisionResult, successes: float, failures: float,
+                         decimal_places: int = 3):
     """
     Plot the Beta posterior with HDI shading and ROPE region for binary data.
 
@@ -35,11 +36,12 @@ def plot_posterior_binary(result: DecisionResult, successes: float, failures: fl
     x = np.linspace(x_min, x_max, 1000)
     y = dist.pdf(x)
 
-    return _plot_posterior(x, y, result, x_bounds=(0, 1))
+    return _plot_posterior(x, y, result, x_bounds=(0, 1), decimal_places=decimal_places)
 
 
 def plot_posterior_continuous(result: DecisionResult, sample_mean: float,
-                              sample_std: float, n: int):
+                              sample_std: float, n: int,
+                              decimal_places: int = 3):
     """
     Plot the Student-t posterior with HDI shading and ROPE region for continuous data.
 
@@ -69,10 +71,10 @@ def plot_posterior_continuous(result: DecisionResult, sample_mean: float,
     x = np.linspace(x_min, x_max, 1000)
     y = dist.pdf(x)
 
-    return _plot_posterior(x, y, result)
+    return _plot_posterior(x, y, result, decimal_places=decimal_places)
 
 
-def _plot_posterior(x, y, result: DecisionResult, x_bounds=None):
+def _plot_posterior(x, y, result: DecisionResult, x_bounds=None, decimal_places: int = 3):
     """
     Core plotting logic shared by binary and continuous posteriors.
 
@@ -91,6 +93,7 @@ def _plot_posterior(x, y, result: DecisionResult, x_bounds=None):
     -------
     matplotlib.figure.Figure
     """
+    fmt = f".{decimal_places}f"
     display = result.display
 
     fig, ax = plt.subplots(figsize=(8, 4))
@@ -115,15 +118,15 @@ def _plot_posterior(x, y, result: DecisionResult, x_bounds=None):
 
     # Point estimate
     ax.axvline(result.point_estimate, color="darkblue", linestyle="-", linewidth=1.5,
-               alpha=0.6, label=f"Estimate = {result.point_estimate:.4f}")
+               alpha=0.6, label=f"Estimate = {result.point_estimate:{fmt}}")
 
     # Annotations
     y_max = ax.get_ylim()[1]
-    ax.annotate(f"HDI: [{result.hdi_min:.4f}, {result.hdi_max:.4f}]",
+    ax.annotate(f"HDI: [{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]",
                 xy=(0.02, 0.95), xycoords="axes fraction",
                 fontsize=9, color="steelblue", verticalalignment="top")
 
-    ax.annotate(f"ROPE: [{result.rope_min:.4f}, {result.rope_max:.4f}]",
+    ax.annotate(f"ROPE: [{result.rope_min:{fmt}}, {result.rope_max:{fmt}}]",
                 xy=(0.02, 0.88), xycoords="axes fraction",
                 fontsize=9, color="gray", verticalalignment="top")
 

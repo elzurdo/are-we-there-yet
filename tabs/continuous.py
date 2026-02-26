@@ -90,11 +90,16 @@ def _sidebar_single_group() -> dict:
     )
 
     ci_fraction = CI_FRACTION
+    decimal_places = 3
     with st.sidebar.expander("⚙️ Advanced"):
         ci_fraction = st.slider(
             "HDI mass", min_value=0.80, max_value=0.99,
             value=CI_FRACTION, step=0.01, format="%.2f",
             key="cont_ci_fraction",
+        )
+        decimal_places = st.number_input(
+            "Decimal places", min_value=1, max_value=10,
+            value=3, step=1, key="cont_decimal_places",
         )
 
     return {
@@ -107,6 +112,7 @@ def _sidebar_single_group() -> dict:
         "rope_width": rope_width,
         "precision_goal": precision_goal,
         "ci_fraction": ci_fraction,
+        "decimal_places": decimal_places,
     }
 
 
@@ -124,6 +130,8 @@ def render_results(inputs: dict):
     rope_width = inputs["rope_width"]
     precision_goal = inputs["precision_goal"]
     ci_fraction = inputs["ci_fraction"]
+    dp = inputs["decimal_places"]
+    fmt = f".{dp}f"
 
     # --- Validation ---
     if rope_min >= rope_max:
@@ -140,19 +148,19 @@ def render_results(inputs: dict):
     with col_s1:
         st.markdown(
             f"**Data**  \n"
-            f"x̄ = {sample_mean:.4f}  \n"
-            f"s = {sample_std:.4f}, n = {n}"
+            f"x̄ = {sample_mean:{fmt}}  \n"
+            f"s = {sample_std:{fmt}}, n = {n}"
         )
     with col_s2:
         st.markdown(
             f"**ROPE**  \n"
-            f"[{rope_min:.4f}, {rope_max:.4f}]  \n"
-            f"Width = {rope_width:.4f}"
+            f"[{rope_min:{fmt}}, {rope_max:{fmt}}]  \n"
+            f"Width = {rope_width:{fmt}}"
         )
     with col_s3:
         st.markdown(
             f"**Precision Goal**  \n"
-            f"{precision_goal:.3f}  \n"
+            f"{precision_goal:{fmt}}  \n"
             f"HDI mass = {ci_fraction:.0%}"
         )
 
@@ -180,15 +188,16 @@ def render_results(inputs: dict):
 
     col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
-        st.metric("HDI width", f"{result.hdi_width:.4f}",
-                   delta=f"Goal: {precision_goal:.4f}",
+        st.metric("HDI width", f"{result.hdi_width:{fmt}}",
+                   delta=f"Goal: {precision_goal:{fmt}}",
                    delta_color="normal" if result.precision_met else "inverse")
     with col_m2:
-        st.metric("HDI", f"[{result.hdi_min:.4f}, {result.hdi_max:.4f}]")
+        st.metric("HDI", f"[{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]")
     with col_m3:
-        st.metric("Sample mean", f"{sample_mean:.4f}")
+        st.metric("Sample mean", f"{sample_mean:{fmt}}")
 
     # --- Plot ---
     fig = plot_posterior_continuous(result, sample_mean=sample_mean,
-                                    sample_std=sample_std, n=n)
+                                    sample_std=sample_std, n=n,
+                                    decimal_places=dp)
     st.pyplot(fig)
