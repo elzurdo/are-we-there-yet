@@ -342,3 +342,134 @@ def _plot_posterior(x, y, result: DecisionResult, x_bounds=None, decimal_places:
     ax.set_yticks([])
     fig.tight_layout()
     return fig
+
+
+def plot_bayes_factor_prior_posterior(
+    successes: int,
+    failures: int,
+    prior_alpha: float,
+    prior_beta: float,
+    theta_null: float,
+    bf_10: float,
+    show_density_ratio: bool = False,
+    decimal_places: int = 3,
+):
+    """
+    Plot prior vs posterior distributions for Bayes Factor interpretation.
+    
+    Visualizes how the data updated beliefs from prior to posterior, with
+    optional Savage-Dickey density ratio visualization.
+    
+    Parameters
+    ----------
+    successes : int
+        Number of successes observed
+    failures : int
+        Number of failures observed
+    prior_alpha : float
+        Beta prior shape parameter α
+    prior_beta : float
+        Beta prior shape parameter β
+    theta_null : float
+        Null hypothesis value
+    bf_10 : float
+        Computed Bayes Factor
+    show_density_ratio : bool
+        If True, show Savage-Dickey density ratio visualization
+    decimal_places : int
+        Number of decimal places for annotations
+    
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    fmt = f".{decimal_places}f"
+    
+    # Create distributions
+    prior_dist = beta(prior_alpha, prior_beta)
+    posterior_dist = beta(successes + prior_alpha, failures + prior_beta)
+    
+    # Generate x values
+    x = np.linspace(0, 1, 1000)
+    y_prior = prior_dist.pdf(x)
+    y_posterior = posterior_dist.pdf(x)
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(10, 5))
+    
+    # Plot prior and posterior
+    ax.plot(x, y_prior, '--', color='gray', linewidth=2, alpha=0.7, 
+            label=f'Prior: Beta({prior_alpha}, {prior_beta})')
+    ax.plot(x, y_posterior, '-', color='steelblue', linewidth=2.5, 
+            label=f'Posterior: Beta({successes + prior_alpha}, {failures + prior_beta})')
+    
+    # Mark null hypothesis
+    ax.axvline(theta_null, color='red', linestyle=':', linewidth=2, alpha=0.6,
+               label=f'H₀: θ = {theta_null:{fmt}}')
+    
+    if show_density_ratio:
+        # Savage-Dickey visualization: show density heights at theta_null
+        prior_density_at_null = prior_dist.pdf(theta_null)
+        posterior_density_at_null = posterior_dist.pdf(theta_null)
+        
+        # Plot dots at the densities
+        ax.plot(theta_null, prior_density_at_null, 'o', color='gray', 
+                markersize=10, label=f'Prior density at θ₀')
+        ax.plot(theta_null, posterior_density_at_null, 'o', color='steelblue', 
+                markersize=10, label=f'Posterior density at θ₀')
+        
+        # Draw connecting line
+        ax.plot([theta_null, theta_null], 
+                [posterior_density_at_null, prior_density_at_null],
+                'k-', linewidth=1, alpha=0.4)
+        
+        # Annotate the ratio
+        mid_y = (prior_density_at_null + posterior_density_at_null) / 2
+        ratio_text = (
+            f"Savage-Dickey Ratio:\n"
+            f"BF₁₀ = {prior_density_at_null:.2f} / {posterior_density_at_null:.2f}\n"
+            f"     ≈ {bf_10:.3f}"
+        )
+        ax.annotate(ratio_text, 
+                    xy=(theta_null, mid_y),
+                    xytext=(15, 0), textcoords='offset points',
+                    fontsize=9, color='black',
+                    bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.3),
+                    ha='left')
+    
+    # Title with BF interpretation
+    if bf_10 > 1:
+        direction = "H₁"
+        color = "darkgreen"
+    elif bf_10 < 1:
+        direction = "H₀"
+        color = "darkred"
+    else:
+        direction = "neither"
+        color = "gray"
+    
+    title = f"Prior vs Posterior | BF₁₀ = {bf_10:.3f} (favors {direction})"
+    ax.set_title(title, fontsize=13, fontweight='bold', color=color)
+    
+    # Annotations box
+    info_text = (
+        f"Data: {successes} successes, {failures} failures\n"
+        f"Posterior mean: {posterior_dist.mean():{fmt}}\n"
+        f"Shift from prior: {posterior_dist.mean() - prior_dist.mean():+{fmt}}"
+    )
+    ax.text(0.02, 0.98, info_text,
+            transform=ax.transAxes,
+            fontsize=9, verticalalignment='top',
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.3))
+    
+    # Labels and legend
+    ax.set_xlabel('θ (success probability)', fontsize=12)
+    ax.set_ylabel('Density', fontsize=12)
+    ax.legend(loc='upper right', fontsize=9)
+    ax.set_xlim(0, 1)
+    
+    # Remove y-ticks for cleaner look
+    ax.set_yticks([])
+    
+    fig.tight_layout()
+    return fig

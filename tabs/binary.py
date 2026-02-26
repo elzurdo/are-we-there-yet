@@ -15,7 +15,10 @@ from utils.stats import (
     check_clt_conditions, beta_overlap, CI_FRACTION,
 )
 from utils.decision import epitg_decision
-from utils.viz import plot_posterior_binary, plot_posterior_difference, plot_two_beta_posteriors, plot_nhst_posterior
+from utils.viz import (
+    plot_posterior_binary, plot_posterior_difference, plot_two_beta_posteriors, 
+    plot_nhst_posterior, plot_bayes_factor_prior_posterior,
+)
 from utils.verdict import render_verdict_display
 from utils.nhst import nhst_test
 from utils.bayes_factor import (
@@ -367,6 +370,27 @@ def _render_single_group(inputs: dict):
                 st.caption(f"BF₀₁ (evidence for H₀) = {bf01:.3f}")
 
                 st.markdown(BAYES_FACTOR_INTERPRETATION)
+
+                # Visualization toggle
+                show_savage_dickey = st.checkbox(
+                    "Show Savage-Dickey density ratio",
+                    value=False,
+                    key="binary_sg_bf_savage_dickey",
+                    help="Visualize BF as the ratio of prior/posterior density heights at θ₀"
+                )
+
+                # Plot prior vs posterior
+                fig_bf = plot_bayes_factor_prior_posterior(
+                    successes=a,
+                    failures=b,
+                    prior_alpha=prior_alpha,
+                    prior_beta=prior_beta,
+                    theta_null=theta_null,
+                    bf_10=bf10,
+                    show_density_ratio=show_savage_dickey,
+                    decimal_places=dp,
+                )
+                st.pyplot(fig_bf)
 
 
                 
