@@ -75,28 +75,33 @@ def plot_posterior_continuous(result: DecisionResult, sample_mean: float,
 
 
 def plot_posterior_difference(result: DecisionResult, delta: float, se: float,
-                              decimal_places: int = 3):
+                              decimal_places: int = 3, dist=None):
     """
-    Plot the Normal posterior of the difference δ = p_A - p_B with HDI and ROPE.
+    Plot the posterior of the difference δ with HDI and ROPE.
+
+    Works with any scipy distribution. If `dist` is not provided,
+    defaults to Normal(loc=delta, scale=se) (used by binary between-groups).
 
     Parameters
     ----------
     result : DecisionResult
         The ePitG decision output.
     delta : float
-        Observed difference (p_A - p_B).
+        Observed difference.
     se : float
         Standard error of the difference.
     decimal_places : int
         Number of decimal places for display.
+    dist : scipy.stats frozen distribution, optional
+        The distribution to plot. If None, uses Normal(delta, se).
 
     Returns
     -------
     matplotlib.figure.Figure
     """
-    from scipy.stats import norm
-
-    dist = norm(loc=delta, scale=se)
+    if dist is None:
+        from scipy.stats import norm
+        dist = norm(loc=delta, scale=se)
 
     # x range
     margin = 4 * se

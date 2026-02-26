@@ -217,6 +217,61 @@ def check_clt_conditions(p_a, n_a, p_b, n_b, threshold=5):
     return conditions
 
 
+def continuous_difference_hdi(mean_a, std_a, n_a, mean_b, std_b, n_b, ci_fraction=CI_FRACTION):
+    """
+    Compute the HDI for the difference δ = mean_A - mean_B using Welch's t-approximation.
+
+    The difference is distributed as:
+        δ ~ t_ν(mean_A - mean_B, SE)
+
+    where SE = sqrt(s_A² / n_A + s_B² / n_B)
+    and ν is the Welch–Satterthwaite degrees of freedom.
+
+    Parameters
+    ----------
+    mean_a : float
+        Sample mean of group A.
+    std_a : float
+        Sample standard deviation of group A.
+    n_a : int
+        Sample size of group A.
+    mean_b : float
+        Sample mean of group B.
+    std_b : float
+        Sample standard deviation of group B.
+    n_b : int
+        Sample size of group B.
+    ci_fraction : float
+        Credible interval fraction (default 0.95).
+
+    Returns
+    -------
+    tuple
+        (hdi_min, hdi_max, se, df) — HDI bounds, standard error, degrees of freedom.
+
+    Raises
+    ------
+    ValueError
+        If either sample size is less than 2.
+    """
+    if n_a < 2 or n_b < 2:
+        raise ValueError(
+            f"Both sample sizes must be at least 2. Got n_A={n_a}, n_B={n_b}"
+        )
+
+    delta = mean_a - mean_b
+    var_a = std_a ** 2 / n_a
+    var_b = std_b ** 2 / n_b
+    se = np.sqrt(var_a + var_b)
+
+    # Welch–Satterthwaite degrees of freedom
+    df = (var_a + var_b) ** 2 / (var_a ** 2 / (n_a - 1) + var_b ** 2 / (n_b - 1))
+
+    hdi_min, hdi_max = HDIofICDF(student_t, df=df, loc=delta, scale=se, ci_fraction=ci_fraction)
+
+    return (hdi_min, hdi_max, se, df)
+
+
 def binomial_rate_ci_width_to_sample_size(p, credible_interval_width, z_star=1.96):
     """
     Approximate sample size needed for a given CI width (normal approximation).
