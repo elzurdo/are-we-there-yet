@@ -12,6 +12,7 @@ import streamlit as st
 from utils.stats import continuous_hdi_ci_limits, CI_FRACTION
 from utils.decision import epitg_decision
 from utils.viz import plot_posterior_continuous
+from utils.verdict import render_verdict_display
 
 
 def sidebar_inputs() -> dict:
@@ -91,6 +92,7 @@ def _sidebar_single_group() -> dict:
 
     ci_fraction = CI_FRACTION
     decimal_places = 3
+    verdict_style = "Centered text"
     with st.sidebar.expander("⚙️ Advanced"):
         ci_fraction = st.slider(
             "HDI mass", min_value=0.80, max_value=0.99,
@@ -100,6 +102,11 @@ def _sidebar_single_group() -> dict:
         decimal_places = st.number_input(
             "Decimal places", min_value=1, max_value=10,
             value=3, step=1, key="cont_decimal_places",
+        )
+        verdict_style = st.radio(
+            "Verdict display style",
+            ["Centered text", "Info/Warning box"],
+            key="cont_verdict_style",
         )
 
     return {
@@ -113,6 +120,7 @@ def _sidebar_single_group() -> dict:
         "precision_goal": precision_goal,
         "ci_fraction": ci_fraction,
         "decimal_places": decimal_places,
+        "verdict_style": verdict_style,
     }
 
 
@@ -131,6 +139,7 @@ def render_results(inputs: dict):
     precision_goal = inputs["precision_goal"]
     ci_fraction = inputs["ci_fraction"]
     dp = inputs["decimal_places"]
+    verdict_style = inputs["verdict_style"]
     fmt = f".{dp}f"
 
     # --- Validation ---
@@ -181,23 +190,23 @@ def render_results(inputs: dict):
 
     # --- Verdict ---
     st.divider()
-    display = result.display
+    render_verdict_display(result, precision_goal, fmt, verdict_style)
 
-    st.markdown(f"### {display['emoji']}  {display['label']}")
-    st.markdown(f"*{display['message']}*")
+    with st.expander("Let Me Peek! 👀", expanded=False):
 
-    col_m1, col_m2, col_m3 = st.columns(3)
-    with col_m1:
-        st.metric("HDI width", f"{result.hdi_width:{fmt}}",
-                   delta=f"Goal: {precision_goal:{fmt}}",
-                   delta_color="normal" if result.precision_met else "inverse")
-    with col_m2:
-        st.metric("HDI", f"[{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]")
-    with col_m3:
-        st.metric("Sample mean", f"{sample_mean:{fmt}}")
 
-    # --- Plot ---
-    fig = plot_posterior_continuous(result, sample_mean=sample_mean,
-                                    sample_std=sample_std, n=n,
-                                    decimal_places=dp)
-    st.pyplot(fig)
+        col_m1, col_m2, col_m3 = st.columns(3)
+        with col_m1:
+            st.metric("HDI width", f"{result.hdi_width:{fmt}}",
+                       delta=f"Goal: {precision_goal:{fmt}}",
+                       delta_color="normal" if result.precision_met else "inverse")
+        with col_m2:
+            st.metric("HDI", f"[{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]")
+        with col_m3:
+            st.metric("Sample mean", f"{sample_mean:{fmt}}")
+
+        # --- Plot ---
+        fig = plot_posterior_continuous(result, sample_mean=sample_mean,
+                                        sample_std=sample_std, n=n,
+                                        decimal_places=dp)
+        st.pyplot(fig)
