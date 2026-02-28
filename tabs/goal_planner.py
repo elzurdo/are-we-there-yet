@@ -62,12 +62,14 @@ SCENARIOS = {
         "variable_type": "Continuous",
         "analysis_mode": "Between Groups",
         "effect_of_interest": 5.0,
+        "std_dev": 10.0,
         "rope_width": 4.0,
         "precision_goal": 3.0,
         "null_value": 0.0,
         "rationale": """
 **Context:** New drug vs placebo, systolic BP reduction
-- **Effect of interest:** 5 mmHg reduction (clinically meaningful per AHA)
+- **Raw effect:** 5 mmHg reduction (clinically meaningful per AHA)
+- **Cohen's d:** 0.50 (assuming SD ≈ 10 mmHg) — **medium effect**
 - **ROPE:** ±2 mmHg (too small to change clinical practice)
 - **Goal:** 1.5 mmHg (tight enough to detect 3+ mmHg effects)
 - **Why it matters:** FDA approval requires demonstrable benefit. 
@@ -98,12 +100,14 @@ SCENARIOS = {
         "variable_type": "Continuous",
         "analysis_mode": "Between Groups",
         "effect_of_interest": 8.0,
+        "std_dev": 20.0,
         "rope_width": 10.0,
         "precision_goal": 6.0,
         "null_value": 0.0,
         "rationale": """
 **Context:** New support chatbot vs human agents (NPS scale -100 to +100)
-- **Effect of interest:** 8 point NPS increase (good outcome)
+- **Raw effect:** 8 point NPS increase (good outcome)
+- **Cohen's d:** 0.40 (assuming SD ≈ 20 points) — **small-to-medium effect**
 - **ROPE:** ±5 points (business considers equivalent performance)
 - **Goal:** 3 points (detect 6+ point differences confidently)
 - **Why it matters:** NPS linked to churn rate. Wrong decision = retention cost.
@@ -116,12 +120,14 @@ SCENARIOS = {
         "variable_type": "Continuous",
         "analysis_mode": "Single Group",
         "effect_of_interest": 0.02,
+        "std_dev": 0.05,
         "rope_width": 0.02,
         "precision_goal": 0.014,
         "null_value": 0.10,
         "rationale": """
 **Context:** Quant strategy vs S&P 500 benchmark (≈10% annual return)
-- **Effect of interest:** 2% alpha (meaningful outperformance)
+- **Raw effect:** 2% alpha (meaningful outperformance)
+- **Cohen's d:** 0.40 (assuming SD ≈ 5%) — **small-to-medium effect**
 - **ROPE:** [9%, 11%] around 10% benchmark (not worth fees/risk)
 - **Goal:** 0.7% (detect 1.5%+ alpha with confidence)
 - **Why it matters:** Institutional clients demand high Sharpe ratios.
@@ -134,13 +140,15 @@ SCENARIOS = {
         "variable_type": "Continuous",
         "analysis_mode": "Between Groups",
         "effect_of_interest": 5.0,
+        "std_dev": 10.0,
         "rope_width": 6.0,
         "precision_goal": 4.0,
         "null_value": 0.0,
         "rationale": """
 **Context:** New teaching method vs traditional (100-point test scale)
-- **Effect of interest:** 5 point improvement (Cohen's d ≈ 0.5, medium effect)
-- **ROPE:** ±3 points (educationally insignificant per Cohen's d < 0.2)
+- **Raw effect:** 5 point improvement on 100-point scale
+- **Cohen's d:** 0.50 (assuming SD ≈ 10 points) — **medium effect**
+- **ROPE:** ±3 points (educationally insignificant, Cohen's d < 0.3)
 - **Goal:** 2 points (detect medium effects confidently)
 - **Why it matters:** School budgets are tight. Ineffective programs waste resources
   and teacher training time. Need tight precision to distinguish real improvements
@@ -169,9 +177,12 @@ SCENARIOS = {
 
 
 # ══════════════════════════════════════════════════════════════
-# Sample Size Estimation
+# Sample Size Estimation — Precision-Based
 # ══════════════════════════════════════════════════════════════
 
+# TODO: mention that this is the mimum for collecting data
+# since it is based on PitG, not ePitG due to conclusiveness issues.
+# It would be illustrative to add conclusivness plot.
 def estimate_sample_size_binary(
     precision_goal: float,
     ci_fraction: float = 0.95,
@@ -185,6 +196,7 @@ def estimate_sample_size_binary(
     
     Uses conservative formula: n ≈ (z * sqrt(p(1-p)) / (goal/2))^2
     where p is the expected proportion.
+
     """
     from scipy.stats import norm
     z = norm.ppf((1 + ci_fraction) / 2)
@@ -225,6 +237,67 @@ def estimate_sample_size_continuous(
         n = n_new
     
     return n
+
+
+# ══════════════════════════════════════════════════════════════
+# Sample Size Estimation — Power-Based (Traditional)
+# ══════════════════════════════════════════════════════════════
+
+def estimate_sample_size_power_binary(
+    effect_size: float,
+    baseline_rate: float = 0.5,
+    alpha: float = 0.05,
+    power: float = 0.80,
+) -> int:
+    """
+    Traditional power-based sample size for binary proportions (two-sample test).
+    
+    Uses normal approximation for two proportions test.
+    Returns sample size per group.
+    """
+    from scipy.stats import norm
+    
+    z_alpha = norm.ppf(1 - alpha / 2)  # Two-tailed
+    z_beta = norm.ppf(power)
+    
+    p1 = baseline_rate
+    p2 = baseline_rate + effect_size
+    p_pooled = (p1 + p2) / 2
+    
+    # Two-sample proportions formula
+    numerator = (z_alpha * np.sqrt(2 * p_pooled * (1 - p_pooled)) + 
+                 z_beta * np.sqrt(p1 * (1 - p1) + p2 * (1 - p2))) ** 2
+    denominator = effect_size ** 2
+    
+    n_per_group = numerator / denominator
+    return int(np.ceil(n_per_group))
+
+
+def estimate_sample_size_power_continuous(
+    effect_size: float,
+    std_dev: float = 1.0,
+    alpha: float = 0.05,
+    power: float = 0.80,
+) -> int:
+    """
+    Traditional power-based sample size for continuous variables (two-sample t-test).
+    
+    Uses standard formula for equal variance t-test.
+    Returns sample size per group.
+    """
+    from scipy.stats import norm, t as student_t
+    
+    # Use z approximation (conservative for large n)
+    z_alpha = norm.ppf(1 - alpha / 2)
+    z_beta = norm.ppf(power)
+    
+    # Cohen's d standardized effect
+    cohen_d = effect_size / std_dev
+    
+    # Two-sample t-test formula
+    n_per_group = 2 * ((z_alpha + z_beta) / cohen_d) ** 2
+    
+    return int(np.ceil(n_per_group))
 
 
 # ══════════════════════════════════════════════════════════════
@@ -294,6 +367,101 @@ def plot_precision_comparison(
                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
     
     fig.suptitle('Precision Goal Comparison', fontsize=14, fontweight='bold', y=1.02)
+    fig.tight_layout()
+    return fig
+
+
+def plot_power_vs_precision(
+    variable_type: str,
+    effect_size: float,
+    precision_goal: float,
+    baseline_rate: float = 0.5,
+    std_dev: float = 1.0,
+    alpha: float = 0.05,
+    power: float = 0.80,
+    ci_fraction: float = 0.95,
+):
+    """
+    Side-by-side comparison of power-based vs precision-based sample size planning.
+    
+    Left: Power curves showing n needed to detect various effect sizes
+    Right: Precision curve showing n needed to achieve various HDI widths
+    """
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # ── Left: Power-Based Planning ──
+    if variable_type == "Binary":
+        # Range of effect sizes to plot
+        effect_range = np.linspace(0.01, 0.30, 50)
+        n_80 = [estimate_sample_size_power_binary(e, baseline_rate, alpha, 0.80) for e in effect_range]
+        n_90 = [estimate_sample_size_power_binary(e, baseline_rate, alpha, 0.90) for e in effect_range]
+        
+        # Current effect size
+        n_current = estimate_sample_size_power_binary(effect_size, baseline_rate, alpha, power)
+    else:  # Continuous
+        # Range of effect sizes to plot
+        effect_range = np.linspace(0.1, 2.0 * effect_size, 50)
+        n_80 = [estimate_sample_size_power_continuous(e, std_dev, alpha, 0.80) for e in effect_range]
+        n_90 = [estimate_sample_size_power_continuous(e, std_dev, alpha, 0.90) for e in effect_range]
+        
+        n_current = estimate_sample_size_power_continuous(effect_size, std_dev, alpha, power)
+    
+    ax1.plot(effect_range, n_80, 'b-', linewidth=2, label='80% Power')
+    ax1.plot(effect_range, n_90, 'r-', linewidth=2, label='90% Power')
+    ax1.axvline(effect_size, color='green', linestyle='--', linewidth=2, 
+                label=f'Your effect: {effect_size:.3f}')
+    ax1.axhline(n_current, color='green', linestyle=':', alpha=0.5)
+    ax1.plot(effect_size, n_current, 'go', markersize=10, 
+             label=f'n = {n_current} per group')
+    
+    ax1.set_xlabel('Effect Size to Detect', fontsize=11)
+    ax1.set_ylabel('Sample Size per Group', fontsize=11)
+    ax1.set_title('Traditional Power Analysis', fontsize=12, fontweight='bold')
+    ax1.legend(loc='upper right', fontsize=9)
+    ax1.grid(alpha=0.3)
+    ax1.set_ylim(bottom=0)
+    
+    # Annotation
+    ax1.text(0.05, 0.95, 
+             f'Question: "How many to detect\neffect = {effect_size:.3f}?"',
+             transform=ax1.transAxes, fontsize=10, va='top',
+             bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.7))
+    
+    # ── Right: Precision-Based Planning ──
+    if variable_type == "Binary":
+        # Range of precision goals to plot
+        precision_range = np.linspace(0.01, 0.30, 50)
+        n_precision = [estimate_sample_size_binary(p, ci_fraction, baseline_rate) for p in precision_range]
+        
+        n_current_prec = estimate_sample_size_binary(precision_goal, ci_fraction, baseline_rate)
+    else:  # Continuous
+        precision_range = np.linspace(0.1, 2.0 * precision_goal, 50)
+        n_precision = [estimate_sample_size_continuous(p, ci_fraction, std_dev) for p in precision_range]
+        
+        n_current_prec = estimate_sample_size_continuous(precision_goal, ci_fraction, std_dev)
+    
+    ax2.plot(precision_range, n_precision, 'purple', linewidth=2, 
+             label=f'{ci_fraction:.0%} CI')
+    ax2.axvline(precision_goal, color='green', linestyle='--', linewidth=2,
+                label=f'Your goal: {precision_goal:.3f}')
+    ax2.axhline(n_current_prec, color='green', linestyle=':', alpha=0.5)
+    ax2.plot(precision_goal, n_current_prec, 'go', markersize=10,
+             label=f'n = {n_current_prec} per group')
+    
+    ax2.set_xlabel('Target HDI Width', fontsize=11)
+    ax2.set_ylabel('Sample Size per Group', fontsize=11)
+    ax2.set_title('Precision-Based Planning (ePitG)', fontsize=12, fontweight='bold')
+    ax2.legend(loc='upper right', fontsize=9)
+    ax2.grid(alpha=0.3)
+    ax2.set_ylim(bottom=0)
+    
+    # Annotation
+    ax2.text(0.05, 0.95,
+             f'Question: "How many for\nHDI width ≤ {precision_goal:.3f}?"',
+             transform=ax2.transAxes, fontsize=10, va='top',
+             bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.7))
+    
+    fig.suptitle('Two Planning Philosophies', fontsize=14, fontweight='bold', y=1.02)
     fig.tight_layout()
     return fig
 
@@ -377,6 +545,10 @@ how to choose appropriate precision goals and ROPE widths for your analysis.
     
     st.markdown("---")
     
+    # For continuous variables, we'll need std_dev to calculate Cohen's d
+    # Get it from scenario if available
+    scenario_std_dev = scenario.get("std_dev", 15.0) if variable_type == "Continuous" else 15.0
+    
     # Clarification box
     with st.expander("💡 What's the difference between these three values?"):
         st.markdown("""
@@ -411,6 +583,27 @@ NOT effect size. We're asking "how much data for this precision?" not
             key="goal_planner_effect",
             help="The smallest effect size you care about detecting",
         )
+        
+        # Show Cohen's d for continuous variables
+        if variable_type == "Continuous":
+            cohen_d_display = effect_size / scenario_std_dev
+            
+            # Determine effect size category and color
+            if cohen_d_display < 0.2:
+                effect_category = "Very Small"
+                effect_emoji = "🔵"
+            elif cohen_d_display < 0.5:
+                effect_category = "Small-to-Medium"
+                effect_emoji = "🟢"
+            elif cohen_d_display < 0.8:
+                effect_category = "Medium-to-Large"
+                effect_emoji = "🟡"
+            else:
+                effect_category = "Large"
+                effect_emoji = "🔴"
+            
+            st.caption(f"{effect_emoji} **Cohen's d = {cohen_d_display:.2f}** ({effect_category})")
+            st.caption("Benchmark: 0.2=small, 0.5=medium, 0.8=large")
     
     with col_p2:
         st.markdown("**ROPE Width**")
@@ -441,6 +634,51 @@ NOT effect size. We're asking "how much data for this precision?" not
     
     null_value = scenario["null_value"]
     
+    # Educational expander about effect sizes
+    if variable_type == "Continuous":
+        with st.expander("📐 Understanding Effect Sizes: Raw vs Standardized (Cohen's d)"):
+            st.markdown(f"""
+### What's the Difference?
+
+**Raw Effect Size** = Difference in original units
+- Your value: **{effect_size:.3f}** (mmHg, points, %, etc.)
+- **Pro:** Directly interpretable in your domain
+- **Con:** Can't compare across different studies or scales
+- **Example:** "5 mmHg reduction" tells clinicians exactly what to expect
+
+**Cohen's d** = Raw effect / Standard deviation (standardized)
+- Your value: **{(effect_size / scenario_std_dev):.2f}** (unitless)
+- **Pro:** Universal benchmark for comparison across studies
+- **Con:** Loses domain-specific meaning
+- **Example:** "d = 0.5" tells researchers this is a 'medium' effect
+
+### Cohen's Benchmarks (Rules of Thumb)
+
+```
+Very Small    Small      Medium     Large    Very Large
+|------------|----------|----------|--------|----------|
+0          0.2        0.5        0.8       1.2       1.5
+                        ▲
+                 Your effect: d = {(effect_size / scenario_std_dev):.2f}
+```
+
+**Interpretation:**
+- **d = 0.2:** Subtle effect, often needs large samples to detect reliably
+- **d = 0.5:** Noticeable effect, visible to trained observers  
+- **d = 0.8:** Large effect, obvious in practice
+- **d > 1.2:** Very large effect, dramatic differences
+
+### In This Planner
+
+✅ You input **raw effect size** (domain-specific)  
+✅ We calculate **Cohen's d** for you (comparison benchmark)  
+✅ Sample size uses **both** (raw effect + SD give accurate n)
+
+**Why it matters:** Cohen's d helps you judge if your effect is meaningful relative
+to typical variability, but raw effect size is what stakeholders need to understand
+the practical impact.
+            """)
+    
     st.divider()
     
     # ── Visualization ──
@@ -465,6 +703,8 @@ goal, enabling a clear decision.
     
     st.divider()
     
+    # TODO: expalin that this is minimum adhering to PitG which is highly inconclusive
+    # It would be illustrative to add a conclusiveness plot here showing that even with this sample size, you may not be conclusive.
     # ── Sample Size Estimation ──
     st.markdown("### 4️⃣ Estimate Sample Size")
     
@@ -474,6 +714,10 @@ assuming typical conditions (balanced groups for between-groups, moderate varian
     """)
     
     col_s1, col_s2 = st.columns(2)
+    
+    # Initialize variables for later use in comparison section
+    baseline_rate = 0.5  # Default
+    std_dev = 15.0  # Default
     
     with col_s1:
         if variable_type == "Binary":
@@ -495,11 +739,15 @@ assuming typical conditions (balanced groups for between-groups, moderate varian
             std_dev = st.number_input(
                 "Expected standard deviation",
                 min_value=0.1,
-                value=15.0,
+                value=float(scenario_std_dev),
                 step=0.5,
                 key="goal_planner_std",
-                help="Estimate of population SD for planning",
+                help="Estimate of population SD for planning (used for sample size and Cohen's d)",
             )
+            
+            # Update Cohen's d with user-entered std_dev
+            cohen_d_updated = effect_size / std_dev
+            st.caption(f"📊 With your SD, Cohen's d = {cohen_d_updated:.2f}")
             n_estimate = estimate_sample_size_continuous(
                 precision_goal=precision_goal,
                 ci_fraction=ci_fraction,
@@ -530,6 +778,7 @@ Ready to use these values in your analysis? Copy them to the appropriate tab:
     
     col_a1, col_a2, col_a3 = st.columns(3)
     
+    # TODO: create an action button that will go to the analysis of the copied setting.
     # Store in session state for other tabs to access
     if st.button("📋 Copy Settings to Clipboard", key="goal_planner_copy"):
         settings_text = f"""
@@ -579,3 +828,117 @@ This ensures you stop collecting data when you have both:
 
 **Rule of thumb:** Precision Goal ≈ 60-80% of ROPE width works well for most applications.
         """)
+    # TODO: Sharpen a few statements   here
+    # ── Power vs Precision Comparison ──
+    with st.expander("⚖️ Power vs Precision: What's the Difference?"):
+        st.markdown("""
+### Two Different Questions
+
+Traditional **power analysis** and **precision-based planning** answer fundamentally different questions:
+        """)
+        
+        col_comp1, col_comp2 = st.columns(2)
+        
+        with col_comp1:
+            st.markdown("""
+**🔍 Power Analysis**
+- Question: *"Can we detect this effect?"*
+- Focus: Statistical significance (p < α)
+- Guarantees: X% chance to reject H₀ if effect ≥ δ
+- Doesn't guarantee: Narrow confidence intervals
+            """)
+        
+        with col_comp2:
+            st.markdown("""
+**📏 Precision Analysis (ePitG)**
+- Question: *"How precisely can we estimate?"*
+- Focus: Confidence interval width
+- Guarantees: HDI width ≤ target
+- Doesn't guarantee: Statistical significance
+            """)
+        
+        st.markdown("---")
+        st.markdown("### 📊 Visual Comparison")
+        
+        # Generate comparison plot
+        if variable_type == "Binary":
+            fig_comparison = plot_power_vs_precision(
+                variable_type="Binary",
+                effect_size=effect_size,
+                precision_goal=precision_goal,
+                baseline_rate=baseline_rate if variable_type == "Binary" else 0.5,
+                alpha=0.05,
+                power=0.80,
+                ci_fraction=ci_fraction,
+            )
+        else:  # Continuous
+            fig_comparison = plot_power_vs_precision(
+                variable_type="Continuous",
+                effect_size=effect_size,
+                precision_goal=precision_goal,
+                std_dev=std_dev if variable_type == "Continuous" else 15.0,
+                alpha=0.05,
+                power=0.80,
+                ci_fraction=ci_fraction,
+            )
+        
+        st.pyplot(fig_comparison)
+        
+        st.markdown("""
+**💡 Key Insight:**  
+The curves show *different cost-benefit tradeoffs*:
+- **Power curves** (left): Smaller effects need larger samples to *detect*
+- **Precision curve** (right): Narrower goals need larger samples to *estimate*
+
+Both are valid — choose based on your research question!
+        """)
+        
+        st.markdown("---")
+        st.markdown("### 📋 Sample Size Comparison Table")
+        
+        # Calculate sample sizes for both approaches
+        if variable_type == "Binary":
+            n_power_80 = estimate_sample_size_power_binary(effect_size, baseline_rate, 0.05, 0.80)
+            n_power_90 = estimate_sample_size_power_binary(effect_size, baseline_rate, 0.05, 0.90)
+            n_precision = estimate_sample_size_binary(precision_goal, ci_fraction, baseline_rate)
+        else:  # Continuous
+            n_power_80 = estimate_sample_size_power_continuous(effect_size, std_dev, 0.05, 0.80)
+            n_power_90 = estimate_sample_size_power_continuous(effect_size, std_dev, 0.05, 0.90)
+            n_precision = estimate_sample_size_continuous(precision_goal, ci_fraction, std_dev)
+        
+        comparison_data = {
+            "Approach": ["Power (80%)", "Power (90%)", "Precision (ePitG)"],
+            "Sample Size per Group": [f"{n_power_80:,}", f"{n_power_90:,}", f"{n_precision:,}"],
+            "Guarantees": [
+                f"80% chance to detect effect ≥ {effect_size:.3f}",
+                f"90% chance to detect effect ≥ {effect_size:.3f}",
+                f"HDI width ≤ {precision_goal:.3f}",
+            ],
+            "Doesn't Guarantee": [
+                "May have wide CI even if p < 0.05",
+                "May have wide CI even if p < 0.05",
+                "May be 'non-significant' despite narrow CI",
+            ],
+        }
+        
+        st.table(comparison_data)
+        
+        st.markdown("""
+### 🤔 Which Should You Use?
+
+**Use Power Analysis when:**
+- You need to demonstrate an effect exists (regulatory approval, policy change)
+- Primary goal is p < 0.05 for publication
+- Effect size is well-defined from prior research
+
+**Use Precision Analysis (ePitG) when:**
+- You need accurate effect size estimates (business decisions, meta-analyses)
+- Want to rule out trivially small effects (equivalence testing)
+- Following sequential testing / early stopping rules
+- Confidence interval width matters more than p-value
+
+**Use Both when:**
+- Prospective study planning (check both sample sizes, use the larger)
+- Writing grants (funders appreciate comprehensive justification)
+        """)
+

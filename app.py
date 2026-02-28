@@ -25,7 +25,7 @@ st.sidebar.caption(caption_str)
 # Main navigation
 page = st.sidebar.radio(
     "Navigation",
-    ["🎯 Goal Planner", "📊 Analysis"],
+    ["📊 Analysis", "🎯 Goal Planner"],
     key="page_navigation",
 )
 
