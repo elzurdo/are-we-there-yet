@@ -16,7 +16,33 @@ st.set_page_config(
 )
 
 from tabs import binary, continuous, categorical
-from utils.tutorials import get_package_versions
+
+
+# Putting here because for some reason
+# when Streamlit hosts the `from utils.tutorials import get_package_versions`
+# doesn't work, even though locally it does.
+# Perhaps this is an __init__.py import issue?
+def get_package_versions(packages=None):
+   """Return a dict of package -> version for common app packages.
+
+   Uses importlib.metadata if available. Returns 'unknown' when a
+   package is not installed or the version cannot be determined.
+   """
+   try:
+      from importlib import metadata as importlib_metadata
+   except Exception:
+      import importlib_metadata
+
+   if packages is None:
+      packages = ["streamlit", "scipy", "numpy", "matplotlib"]
+
+   versions = {}
+   for pkg in packages:
+      try:
+         versions[pkg] = importlib_metadata.version(pkg)
+      except Exception:
+         versions[pkg] = "unknown"
+   return versions
 
 caption_str = "Sequential HypothesisTesting Advisor"
 # ── Sidebar ──────────────────────────────────────────────────────────
