@@ -204,3 +204,27 @@ BAYES_FACTOR_INTERPRETATION = """
 - BF grows indefinitely with sample size, even for tiny effects
 - BF compares *relative evidence*, not practical significance (ROPE)
 """
+
+
+def get_package_versions(packages=None):
+   """Return a dict of package -> version for common app packages.
+
+   Uses importlib.metadata if available. Returns 'unknown' when a
+   package is not installed or the version cannot be determined.
+   """
+   try:
+      from importlib import metadata as importlib_metadata
+   except Exception:
+      import importlib_metadata
+
+   if packages is None:
+      packages = ["streamlit", "scipy", "numpy", "matplotlib"]
+
+   versions = {}
+   for pkg in packages:
+      try:
+         versions[pkg] = importlib_metadata.version(pkg)
+      except Exception:
+         versions[pkg] = "unknown"
+   return versions
+

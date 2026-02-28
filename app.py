@@ -16,6 +16,7 @@ st.set_page_config(
 )
 
 from tabs import binary, continuous, categorical
+from utils.tutorials import get_package_versions
 
 caption_str = "Sequential HypothesisTesting Advisor"
 # ── Sidebar ──────────────────────────────────────────────────────────
@@ -38,6 +39,14 @@ elif variable_type == "Continuous":
 else:  # Categorical
     inputs = categorical.sidebar_inputs()
 
+# ── Sidebar watermark (package versions) ─────────────────────────────────
+try:
+    _versions = get_package_versions()
+except Exception:
+    _versions = {"streamlit": "unknown", "scipy": "unknown", "numpy": "unknown", "matplotlib": "unknown"}
+
+_compact = f"📦 Built with: streamlit {_versions.get('streamlit','unknown')} | scipy {_versions.get('scipy','unknown')} | numpy {_versions.get('numpy','unknown')} | matplotlib {_versions.get('matplotlib','unknown')}"
+st.sidebar.caption(_compact)
 # ── Main area ────────────────────────────────────────────────────────
 st.title("Are We There Yet? 🚗")
 st.caption(caption_str)
