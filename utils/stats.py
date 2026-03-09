@@ -132,7 +132,7 @@ def beta_overlap(a1, b1, a2, b2, n_points=2000):
     x = np.linspace(0, 1, n_points)
     pdf1 = beta(a1, b1).pdf(x)
     pdf2 = beta(a2, b2).pdf(x)
-    overlap = np.trapz(np.minimum(pdf1, pdf2), x)
+    overlap = np.trapezoid(np.minimum(pdf1, pdf2), x)
     return float(overlap)
 
 
