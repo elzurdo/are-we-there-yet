@@ -34,3 +34,23 @@ python3.10 -m venv .venv
 ```bash
 pip install -r requirements.txt
 ```
+
+
+## Testing
+
+Tests live in the `tests/` directory and use [pytest](https://docs.pytest.org/).
+
+### Install pytest (one-time)
+
+```bash
+source .venv/bin/activate
+pip install pytest
+```
+Test by doing `which pytest`. If not in the correct locaiton
+do `source .venv/bin/activate` again.
+
+### Run all tests
+
+```bash
+pytest tests/ -v
+```
