@@ -253,7 +253,12 @@ def _render_single_group(inputs: dict):
     st.divider()
     render_verdict_display(result, precision_goal, fmt, verdict_style)
 
-    with st.expander("Let Me Peek! 👀", expanded=False):
+    peek_container = (
+        st.container()
+        if result.can_stop
+        else st.expander("Let Me Peek! 👀", expanded=False)
+    )
+    with peek_container:
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
             st.metric("HDI width", f"{result.hdi_width:{fmt}}",
@@ -628,7 +633,12 @@ def _render_between_groups(inputs: dict):
     st.divider()
     render_verdict_display(result, precision_goal, fmt, verdict_style)
 
-    with st.expander("Let Me Peek! 👀", expanded=False):
+    peek_container = (
+        st.container()
+        if result.can_stop
+        else st.expander("Let Me Peek! 👀", expanded=False)
+    )
+    with peek_container:
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
             st.metric("HDI width", f"{result.hdi_width:{fmt}}",
