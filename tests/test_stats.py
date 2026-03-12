@@ -91,7 +91,6 @@ class TestHDIofICDF:
 
     def test_normal_matches_ppf(self):
         """Normal(5, 2) 95% HDI should match equal-tailed quantiles."""
-        from scipy.stats import norm as scipy_norm
         hdi_min, hdi_max = HDIofICDF(scipy_norm, ci_fraction=0.95, loc=5, scale=2)
         dist = scipy_norm(loc=5, scale=2)
         assert hdi_min == pytest.approx(dist.ppf(0.025), abs=1e-3)
