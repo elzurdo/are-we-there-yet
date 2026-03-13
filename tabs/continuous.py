@@ -20,9 +20,9 @@ import streamlit as st
 import numpy as np
 from scipy.stats import t as student_t
 
-from utils.stats import continuous_hdi_ci_limits, continuous_difference_hdi, CI_FRACTION
+from utils.stats import continuous_hdi_ci_limits, continuous_difference_hdi, continuous_overlap, CI_FRACTION
 from utils.decision import epitg_decision
-from utils.viz import plot_posterior_continuous, plot_posterior_difference, plot_nhst_posterior
+from utils.viz import plot_posterior_continuous, plot_posterior_difference, plot_nhst_posterior, plot_two_continuous_posteriors
 from utils.verdict import render_verdict_display
 from utils.nhst import nhst_test
 from utils.tutorials import (
@@ -525,6 +525,21 @@ def _render_between_groups(inputs: dict):
         fig = plot_posterior_difference(result, delta=delta, se=se,
                                         decimal_places=dp, dist=dist)
         st.pyplot(fig)
+
+        # --- Individual group posteriors ---
+        st.markdown("##### Individual Group Posteriors")
+        overlap = continuous_overlap(mean_a, std_a, n_a, mean_b, std_b, n_b)
+
+        col_ov, _ = st.columns([1, 2])
+        with col_ov:
+            st.metric("Posterior Overlap", f"{overlap:{fmt}}")
+
+        fig2 = plot_two_continuous_posteriors(
+            mean_a, std_a, n_a, mean_b, std_b, n_b,
+            overlap=overlap, decimal_places=dp,
+            label_a=label_a, label_b=label_b,
+        )
+        st.pyplot(fig2)
 
         # --- Alternative Methods ---
         with st.expander("⚖️ Alternative Methods", expanded=False):

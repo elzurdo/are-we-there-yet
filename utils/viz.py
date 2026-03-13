@@ -173,6 +173,66 @@ def plot_two_beta_posteriors(a1, b1, a2, b2, overlap, decimal_places: int = 3,
     return fig
 
 
+def plot_two_continuous_posteriors(
+    mean_a, std_a, n_a, mean_b, std_b, n_b,
+    overlap, decimal_places: int = 3,
+    label_a: str = "Group A", label_b: str = "Group B",
+):
+    """
+    Plot two Student-t posteriors on the same axes with overlap shading.
+
+    Parameters
+    ----------
+    mean_a, std_a, n_a : float
+        Sample mean, std, and size for group A.
+    mean_b, std_b, n_b : float
+        Sample mean, std, and size for group B.
+    overlap : float
+        Pre-computed overlap coefficient (displayed in title).
+    decimal_places : int
+        Number of decimal places for annotations.
+    label_a : str
+        Label for the first group (default "Group A").
+    label_b : str
+        Label for the second group (default "Group B").
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    fmt = f".{decimal_places}f"
+
+    se_a = std_a / np.sqrt(n_a)
+    se_b = std_b / np.sqrt(n_b)
+    dist_a = student_t(df=n_a - 1, loc=mean_a, scale=se_a)
+    dist_b = student_t(df=n_b - 1, loc=mean_b, scale=se_b)
+
+    # x range: cover both distributions
+    x_lo = min(dist_a.ppf(0.001), dist_b.ppf(0.001))
+    x_hi = max(dist_a.ppf(0.999), dist_b.ppf(0.999))
+    x = np.linspace(x_lo, x_hi, 1000)
+    y_a = dist_a.pdf(x)
+    y_b = dist_b.pdf(x)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    ax.plot(x, y_a, color="steelblue", linewidth=2, label=f"{label_a} (x̄={mean_a:{fmt}})")
+    ax.plot(x, y_b, color="darkorange", linewidth=2, label=f"{label_b} (x̄={mean_b:{fmt}})")
+
+    y_min = np.minimum(y_a, y_b)
+    ax.fill_between(x, y_min, alpha=0.25, color="mediumpurple", label=f"Overlap = {overlap:{fmt}}")
+    ax.fill_between(x, y_a, alpha=0.08, color="steelblue")
+    ax.fill_between(x, y_b, alpha=0.08, color="darkorange")
+
+    ax.set_title(f"Individual Group Posteriors  —  Overlap = {overlap:{fmt}}", fontsize=13)
+    ax.set_xlabel("μ", fontsize=12)
+    ax.set_ylabel("Density", fontsize=12)
+    ax.legend(loc="upper right", fontsize=9)
+    ax.set_yticks([])
+    fig.tight_layout()
+    return fig
+
+
 def plot_nhst_posterior(
     observed: float,
     null_value: float,

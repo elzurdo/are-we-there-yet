@@ -136,6 +136,41 @@ def beta_overlap(a1, b1, a2, b2, n_points=2000):
     return float(overlap)
 
 
+def continuous_overlap(mean_a, std_a, n_a, mean_b, std_b, n_b, n_points=2000):
+    """
+    Compute the overlap coefficient between two Student-t posteriors.
+
+    OVL = ∫ min(f_A(x), f_B(x)) dx
+
+    Parameters
+    ----------
+    mean_a, std_a, n_a : float
+        Sample mean, std, and size for group A.
+    mean_b, std_b, n_b : float
+        Sample mean, std, and size for group B.
+    n_points : int
+        Number of grid points for numerical integration.
+
+    Returns
+    -------
+    float
+        Overlap coefficient in [0, 1].
+    """
+    se_a = std_a / np.sqrt(n_a)
+    se_b = std_b / np.sqrt(n_b)
+    dist_a = student_t(df=n_a - 1, loc=mean_a, scale=se_a)
+    dist_b = student_t(df=n_b - 1, loc=mean_b, scale=se_b)
+
+    # Cover both distributions
+    lo = min(dist_a.ppf(0.001), dist_b.ppf(0.001))
+    hi = max(dist_a.ppf(0.999), dist_b.ppf(0.999))
+    x = np.linspace(lo, hi, n_points)
+    pdf_a = dist_a.pdf(x)
+    pdf_b = dist_b.pdf(x)
+    overlap = np.trapezoid(np.minimum(pdf_a, pdf_b), x)
+    return float(overlap)
+
+
 def binary_difference_hdi(p_a, n_a, p_b, n_b, ci_fraction=CI_FRACTION):
     """
     Compute the HDI for the difference δ = p_A - p_B using the CLT approximation.
