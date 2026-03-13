@@ -456,8 +456,18 @@ def _sidebar_between_groups() -> dict:
 
     st.sidebar.markdown("### 📊 Data")
 
-    group_a = _sidebar_group_inputs("Group A", "bg_a")
-    group_b = _sidebar_group_inputs("Group B", "bg_b")
+    col_la, col_lb = st.sidebar.columns(2)
+    with col_la:
+        label_a = st.text_input("Label A", value="Group A", key="bg_label_a")
+    with col_lb:
+        label_b = st.text_input("Label B", value="Group B", key="bg_label_b")
+    if not label_a.strip():
+        label_a = "Group A"
+    if not label_b.strip():
+        label_b = "Group B"
+
+    group_a = _sidebar_group_inputs(label_a, "bg_a")
+    group_b = _sidebar_group_inputs(label_b, "bg_b")
 
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
 
@@ -523,6 +533,8 @@ def _sidebar_between_groups() -> dict:
         "analysis_mode": "Between Groups",
         "group_a": group_a,
         "group_b": group_b,
+        "label_a": label_a,
+        "label_b": label_b,
         "theta_null": theta_null,
         "rope_min": rope_min,
         "rope_max": rope_max,
@@ -539,6 +551,8 @@ def _render_between_groups(inputs: dict):
 
     group_a = inputs["group_a"]
     group_b = inputs["group_b"]
+    label_a = inputs.get("label_a", "Group A")
+    label_b = inputs.get("label_b", "Group B")
     rope_min = inputs["rope_min"]
     rope_max = inputs["rope_max"]
     rope_width = inputs["rope_width"]
@@ -585,13 +599,13 @@ def _render_between_groups(inputs: dict):
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown(
-            f"**Group A**  \n"
+            f"**{label_a}**  \n"
             f"{s_a} successes / {n_a} total  \n"
             f"Rate = {p_a:{fmt}}"
         )
     with col_b:
         st.markdown(
-            f"**Group B**  \n"
+            f"**{label_b}**  \n"
             f"{s_b} successes / {n_b} total  \n"
             f"Rate = {p_b:{fmt}}"
         )
@@ -600,7 +614,7 @@ def _render_between_groups(inputs: dict):
     with col_s1:
         st.markdown(
             f"**Difference (δ)**  \n"
-            f"p̂_A − p̂_B = {delta:{fmt}}  \n"
+            f"p̂_{label_a} − p̂_{label_b} = {delta:{fmt}}  \n"
             f"SE = {se:{fmt}}"
         )
     with col_s2:
@@ -664,7 +678,8 @@ def _render_between_groups(inputs: dict):
         with col_ov:
             st.metric("Posterior Overlap", f"{overlap:{fmt}}")
 
-        fig2 = plot_two_beta_posteriors(a_a, b_a, a_b, b_b, overlap=overlap, decimal_places=dp)
+        fig2 = plot_two_beta_posteriors(a_a, b_a, a_b, b_b, overlap=overlap, decimal_places=dp,
+                                         label_a=label_a, label_b=label_b)
         st.pyplot(fig2)
 
         # --- Alternative Methods ---

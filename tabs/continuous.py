@@ -325,8 +325,18 @@ def _sidebar_between_groups() -> dict:
 
     st.sidebar.markdown("### 📊 Data")
 
-    group_a = _sidebar_group_inputs("Group A", "cont_bg_a")
-    group_b = _sidebar_group_inputs("Group B", "cont_bg_b")
+    col_la, col_lb = st.sidebar.columns(2)
+    with col_la:
+        label_a = st.text_input("Label A", value="Group A", key="cont_bg_label_a")
+    with col_lb:
+        label_b = st.text_input("Label B", value="Group B", key="cont_bg_label_b")
+    if not label_a.strip():
+        label_a = "Group A"
+    if not label_b.strip():
+        label_b = "Group B"
+
+    group_a = _sidebar_group_inputs(label_a, "cont_bg_a")
+    group_b = _sidebar_group_inputs(label_b, "cont_bg_b")
 
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
 
@@ -392,6 +402,8 @@ def _sidebar_between_groups() -> dict:
         "analysis_mode": "Between Groups",
         "group_a": group_a,
         "group_b": group_b,
+        "label_a": label_a,
+        "label_b": label_b,
         "theta_null": theta_null,
         "rope_min": rope_min,
         "rope_max": rope_max,
@@ -408,6 +420,8 @@ def _render_between_groups(inputs: dict):
 
     group_a = inputs["group_a"]
     group_b = inputs["group_b"]
+    label_a = inputs.get("label_a", "Group A")
+    label_b = inputs.get("label_b", "Group B")
     rope_min = inputs["rope_min"]
     rope_max = inputs["rope_max"]
     rope_width = inputs["rope_width"]
@@ -454,13 +468,13 @@ def _render_between_groups(inputs: dict):
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown(
-            f"**Group A**  \n"
+            f"**{label_a}**  \n"
             f"x̄ = {mean_a:{fmt}}, s = {std_a:{fmt}}  \n"
             f"n = {n_a}"
         )
     with col_b:
         st.markdown(
-            f"**Group B**  \n"
+            f"**{label_b}**  \n"
             f"x̄ = {mean_b:{fmt}}, s = {std_b:{fmt}}  \n"
             f"n = {n_b}"
         )
@@ -469,7 +483,7 @@ def _render_between_groups(inputs: dict):
     with col_s1:
         st.markdown(
             f"**Difference (δ)**  \n"
-            f"x̄_A − x̄_B = {delta:{fmt}}  \n"
+            f"x̄_{label_a} − x̄_{label_b} = {delta:{fmt}}  \n"
             f"SE = {se:{fmt}}, ν = {df:.1f}"
         )
     with col_s2:

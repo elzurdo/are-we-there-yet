@@ -113,7 +113,8 @@ def plot_posterior_difference(result: DecisionResult, delta: float, se: float,
     return _plot_posterior(x, y, result, decimal_places=decimal_places, x_label="δ (difference)")
 
 
-def plot_two_beta_posteriors(a1, b1, a2, b2, overlap, decimal_places: int = 3):
+def plot_two_beta_posteriors(a1, b1, a2, b2, overlap, decimal_places: int = 3,
+                             label_a: str = "Group A", label_b: str = "Group B"):
     """
     Plot two Beta posteriors on the same axes with overlap shading.
 
@@ -127,6 +128,10 @@ def plot_two_beta_posteriors(a1, b1, a2, b2, overlap, decimal_places: int = 3):
         Pre-computed overlap coefficient (displayed in title).
     decimal_places : int
         Number of decimal places for annotations.
+    label_a : str
+        Label for the first group (default "Group A").
+    label_b : str
+        Label for the second group (default "Group B").
 
     Returns
     -------
@@ -148,8 +153,8 @@ def plot_two_beta_posteriors(a1, b1, a2, b2, overlap, decimal_places: int = 3):
     fig, ax = plt.subplots(figsize=(8, 4))
 
     # Plot both PDFs
-    ax.plot(x, y_a, color="steelblue", linewidth=2, label=f"Group A (p̂={mean_a:{fmt}})")
-    ax.plot(x, y_b, color="darkorange", linewidth=2, label=f"Group B (p̂={mean_b:{fmt}})")
+    ax.plot(x, y_a, color="steelblue", linewidth=2, label=f"{label_a} (p̂={mean_a:{fmt}})")
+    ax.plot(x, y_b, color="darkorange", linewidth=2, label=f"{label_b} (p̂={mean_b:{fmt}})")
 
     # Shade overlap region
     y_min = np.minimum(y_a, y_b)
