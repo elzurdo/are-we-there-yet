@@ -12,7 +12,7 @@ import numpy as np
 
 from utils.stats import (
     successes_failures_to_hdi_ci_limits, binary_difference_hdi,
-    check_clt_conditions, beta_overlap, CI_FRACTION,
+    check_clt_conditions, beta_overlap, CI_FRACTION, estimate_n_goal,
 )
 from utils.decision import epitg_decision
 from utils.viz import (
@@ -252,6 +252,16 @@ def _render_single_group(inputs: dict):
     # --- Verdict ---
     st.divider()
     render_verdict_display(result, precision_goal, fmt, verdict_style)
+
+    # --- Sample size advice (shown only when precision not yet met) ---
+    if not result.precision_met:
+        variance = observed_rate * (1 - observed_rate)
+        n_goal, n_additional = estimate_n_goal(variance, precision_goal, total, ci_fraction)
+        st.info(
+            f"📏 **Estimated additional samples needed: ~{n_additional:,}** "
+            f"(target total: ~{n_goal:,}), based on the current observed rate "
+            f"of {observed_rate:{fmt}}."
+        )
 
     peek_container = (
         st.container()

@@ -307,6 +307,51 @@ def continuous_difference_hdi(mean_a, std_a, n_a, mean_b, std_b, n_b, ci_fractio
     return (hdi_min, hdi_max, se, df)
 
 
+def estimate_n_goal(
+    variance: float,
+    precision_goal: float,
+    n_current: int,
+    ci_fraction: float = CI_FRACTION,
+) -> tuple:
+    """
+    Estimate N_goal and additional samples needed to reach the precision goal.
+
+    Uses the CLT approximation (Bernstein–von Mises):
+        HDI width ≈ 2 · z* · sqrt(V / N)
+
+    Setting width = precision_goal and solving for N:
+        N_goal ≈ 4 · z*² · V / precision_goal²
+
+    This is generic: caller supplies the per-observation variance V for their context:
+      - Binary single group:     V = θ̂(1 − θ̂)
+      - Binary between groups:   V = p̂_A(1−p̂_A)/n_A + p̂_B(1−p̂_B)/n_B  (total SE²)
+      - Continuous (mean):       V = σ̂²
+
+    Parameters
+    ----------
+    variance : float
+        Per-observation variance V(θ). See notes above.
+    precision_goal : float
+        Target HDI width (ω_goal).
+    n_current : int
+        Number of observations already collected.
+    ci_fraction : float
+        Credible interval fraction (default 0.95).
+
+    Returns
+    -------
+    tuple[int, int]
+        (n_goal, n_additional) where n_additional = max(0, n_goal − n_current).
+    """
+    import math
+    from scipy.stats import norm as _norm
+
+    z_star = _norm.ppf((1 + ci_fraction) / 2)
+    n_goal = math.ceil(4 * z_star ** 2 * variance / precision_goal ** 2)
+    n_additional = max(0, n_goal - n_current)
+    return n_goal, n_additional
+
+
 def binomial_rate_ci_width_to_sample_size(p, credible_interval_width, z_star=1.96):
     """
     Approximate sample size needed for a given CI width (normal approximation).
