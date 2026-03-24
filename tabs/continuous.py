@@ -20,7 +20,7 @@ import streamlit as st
 import numpy as np
 from scipy.stats import t as student_t
 
-from utils.stats import continuous_hdi_ci_limits, continuous_difference_hdi, continuous_overlap, CI_FRACTION
+from utils.stats import continuous_hdi_ci_limits, continuous_difference_hdi, continuous_overlap, CI_FRACTION, estimate_n_goal
 from utils.decision import epitg_decision
 from utils.viz import plot_posterior_continuous, plot_posterior_difference, plot_nhst_posterior, plot_two_continuous_posteriors
 from utils.verdict import render_verdict_display
@@ -220,6 +220,16 @@ def _render_single_group(inputs: dict):
     # --- Verdict ---
     st.divider()
     render_verdict_display(result, precision_goal, fmt, verdict_style)
+
+    # --- Sample size advice (shown only when precision not yet met) ---
+    if not result.precision_met:
+        variance = sample_std ** 2
+        n_goal, n_additional = estimate_n_goal(variance, precision_goal, n, ci_fraction)
+        st.info(
+            f"📏 **Estimated additional samples needed: ~{n_additional:,}** "
+            f"(target total: ~{n_goal:,}), based on the current sample std "
+            f"of {sample_std:{fmt}}."
+        )
 
     peek_container = (
         st.container()
