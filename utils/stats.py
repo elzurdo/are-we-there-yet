@@ -352,6 +352,69 @@ def estimate_n_goal(
     return n_goal, n_additional
 
 
+def estimate_n_goal_between_groups(
+    p_a: float,
+    n_a: int,
+    p_b: float,
+    n_b: int,
+    precision_goal: float,
+    ci_fraction: float = CI_FRACTION,
+) -> tuple:
+    """
+    Estimate per-group sample sizes needed to reach the precision goal for a
+    between-groups proportion comparison, preserving the current group ratio.
+
+    Derivation
+    ----------
+    With fixed ratio r = n_A / (n_A + n_B), SE² scales as 1 / N_total:
+
+        SE²(N) = [p̂_A(1−p̂_A)/r + p̂_B(1−p̂_B)/(1−r)] / N_total  ≡ V_eff / N_total
+
+    Setting 2·z*·sqrt(V_eff / N_total) = precision_goal and solving:
+
+        N_total_goal = ceil(4·z*² · V_eff / precision_goal²)
+
+    The goal totals per group (preserving ratio):
+        n_A_goal = ceil(r · N_total_goal)
+        n_B_goal = N_total_goal − n_A_goal
+
+    Parameters
+    ----------
+    p_a : float
+        Observed proportion in group A.
+    n_a : int
+        Current sample size of group A.
+    p_b : float
+        Observed proportion in group B.
+    n_b : int
+        Current sample size of group B.
+    precision_goal : float
+        Target HDI width (ω_goal).
+    ci_fraction : float
+        Credible interval fraction (default 0.95).
+
+    Returns
+    -------
+    tuple[int, int, int, int]
+        (n_a_goal, n_b_goal, n_a_additional, n_b_additional)
+    """
+    import math
+    from scipy.stats import norm as _norm
+
+    z_star = _norm.ppf((1 + ci_fraction) / 2)
+    r = n_a / (n_a + n_b)
+    v_eff = p_a * (1 - p_a) / r + p_b * (1 - p_b) / (1 - r)
+    n_total_goal = math.ceil(4 * z_star ** 2 * v_eff / precision_goal ** 2)
+    n_a_goal = math.ceil(r * n_total_goal)
+    n_b_goal = n_total_goal - n_a_goal
+    return (
+        n_a_goal,
+        n_b_goal,
+        max(0, n_a_goal - n_a),
+        max(0, n_b_goal - n_b),
+    )
+
+
 def binomial_rate_ci_width_to_sample_size(p, credible_interval_width, z_star=1.96):
     """
     Approximate sample size needed for a given CI width (normal approximation).

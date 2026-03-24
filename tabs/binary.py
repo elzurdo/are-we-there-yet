@@ -13,6 +13,7 @@ import numpy as np
 from utils.stats import (
     successes_failures_to_hdi_ci_limits, binary_difference_hdi,
     check_clt_conditions, beta_overlap, CI_FRACTION, estimate_n_goal,
+    estimate_n_goal_between_groups,
 )
 from utils.decision import epitg_decision
 from utils.viz import (
@@ -656,6 +657,17 @@ def _render_between_groups(inputs: dict):
     # --- Verdict ---
     st.divider()
     render_verdict_display(result, precision_goal, fmt, verdict_style)
+
+    # --- Sample size advice (shown only when precision not yet met) ---
+    if not result.precision_met:
+        n_a_goal, n_b_goal, n_a_add, n_b_add = estimate_n_goal_between_groups(
+            p_a, n_a, p_b, n_b, precision_goal, ci_fraction
+        )
+        st.info(
+            f"📏 **Estimated additional samples needed** (preserving current {n_a}/{n_b} ratio):  \n"
+            f"**{label_a}**: ~{n_a_add:,} more (target ~{n_a_goal:,})  \n"
+            f"**{label_b}**: ~{n_b_add:,} more (target ~{n_b_goal:,})"
+        )
 
     peek_container = (
         st.container()

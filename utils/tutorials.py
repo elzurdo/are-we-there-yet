@@ -104,6 +104,46 @@ $n_A \hat{p}_A$, $\;n_A(1-\hat{p}_A)$, $\;n_B \hat{p}_B$, $\;n_B(1-\hat{p}_B)$
 
 When any condition fails, the Normal approximation may be inaccurate —
 the true distribution of the difference can be skewed.
+
+---
+
+**Estimating the sample size needed to reach the precision goal**
+
+By the Bernstein–von Mises theorem, the HDI width shrinks proportionally to $N^{-1/2}$:
+
+$$\text{HDI width} \approx 2 z_* \sqrt{\frac{V(\theta)}{N}}$$
+
+where $V(\theta)$ is the per-observation variance of the estimator and $z_*$ is the critical
+value for the chosen HDI mass (e.g. $z_* \approx 1.96$ for 95%).
+
+Setting HDI width $= \omega_{\rm goal}$ and solving for $N$:
+
+$$N_{\rm goal} \approx \frac{4 z_*^2 \, V(\theta)}{\omega_{\rm goal}^2}$$
+
+This formula is **generic** — only $V(\theta)$ changes across contexts:
+
+| Context | $V(\theta)$ |
+|---|---|
+| Binary single group | $\hat\theta(1-\hat\theta)$ |
+| Binary between groups | see below |
+| Continuous single group | $s^2$ |
+
+**Between-groups case — preserving the observed group ratio**
+
+Let $r = n_A / (n_A + n_B)$ be the current allocation ratio. For fixed $r$, the SE² satisfies:
+
+$$\text{SE}^2 = \frac{\hat{p}_A(1-\hat{p}_A)}{r} \cdot \frac{1}{N_{\rm total}} + \frac{\hat{p}_B(1-\hat{p}_B)}{1-r} \cdot \frac{1}{N_{\rm total}} \;\equiv\; \frac{V_{\rm eff}}{N_{\rm total}}$$
+
+so $V_{\rm eff} = \dfrac{\hat{p}_A(1-\hat{p}_A)}{r} + \dfrac{\hat{p}_B(1-\hat{p}_B)}{1-r}$, giving:
+
+$$N_{\rm total,\, goal} = \left\lceil \frac{4 z_*^2 \, V_{\rm eff}}{\omega_{\rm goal}^2} \right\rceil$$
+
+The per-group targets are then recovered by splitting via the same ratio:
+
+$$n_{A,\rm goal} = \lceil r \cdot N_{\rm total,\, goal} \rceil, \qquad n_{B,\rm goal} = N_{\rm total,\, goal} - n_{A,\rm goal}$$
+
+This is only an approximation — it assumes the observed rates $\hat{p}_A, \hat{p}_B$ are
+close to the true values. The estimate becomes more reliable as sample size grows.
 """
 
 
