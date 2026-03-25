@@ -63,6 +63,28 @@ to find the narrowest interval containing the specified mass (e.g., 95%).
 **HDI width** is our precision measure: narrower intervals give more precise estimates.
 The ePitG algorithm checks whether the HDI width meets the precision goal *and* 
 whether the HDI location is conclusive relative to the ROPE.
+
+---
+
+**Estimating the sample size needed to reach the precision goal**
+
+By the Bernstein–von Mises theorem, the HDI width of a Beta posterior shrinks
+proportionally to $N^{-1/2}$ as data accumulate. Under a Normal approximation:
+
+$$\text{HDI width} \approx 2 z_* \sqrt{\frac{V(\theta)}{N}}$$
+
+where $z_*$ is the critical value for the chosen HDI mass (e.g. $z_* \approx 1.96$ for 95%)
+and $V(\theta) = \hat\theta(1-\hat\theta)$ is the per-observation variance of the
+Bernoulli estimator. Setting HDI width $= \omega_{\rm goal}$ and solving for $N$:
+
+$$N_{\rm goal} \approx \frac{4 z_*^2 \, \hat\theta(1-\hat\theta)}{\omega_{\rm goal}^2}$$
+
+Note that $\hat\theta(1-\hat\theta)$ is maximised at $\hat\theta = 0.5$, so a balanced
+outcome demands the most data for any given precision goal; estimates near 0 or 1
+converge faster.
+
+This is an approximation — it assumes the observed rate $\hat\theta$ is close to
+the true value. The estimate becomes more reliable as sample size grows.
 """
 
 MATHS_BINARY_BETWEEN_GROUPS = r"""
@@ -130,17 +152,45 @@ This formula is **generic** — only $V(\theta)$ changes across contexts:
 
 **Between-groups case — preserving the observed group ratio**
 
-Let $r = n_A / (n_A + n_B)$ be the current allocation ratio. For fixed $r$, the SE² satisfies:
+$\text{SE}^2$ receives an independent contribution from each group — one for $\hat{p}_A$
+and one for $\hat{p}_B$ — because we are estimating a *difference* and the groups are
+independent, so their variances add. This is **not** variance pooling: no assumption of
+equal proportions is made, and each group retains its own term.
 
-$$\text{SE}^2 = \frac{\hat{p}_A(1-\hat{p}_A)}{r} \cdot \frac{1}{N_{\rm total}} + \frac{\hat{p}_B(1-\hat{p}_B)}{1-r} \cdot \frac{1}{N_{\rm total}} \;\equiv\; \frac{V_{\rm eff}}{N_{\rm total}}$$
+Let $r = n_A / (n_A + n_B)$ be the current allocation ratio, treated as a fixed constant
+going forward. Writing $n_A = r\,N_{\rm total}$ and $n_B = (1-r)\,N_{\rm total}$:
 
-so $V_{\rm eff} = \dfrac{\hat{p}_A(1-\hat{p}_A)}{r} + \dfrac{\hat{p}_B(1-\hat{p}_B)}{1-r}$, giving:
+$$\text{SE}^2 = \frac{\hat{p}_A(1-\hat{p}_A)}{r\,N_{\rm total}} + \frac{\hat{p}_B(1-\hat{p}_B)}{(1-r)\,N_{\rm total}} \;\equiv\; \frac{V_{\rm eff}}{N_{\rm total}}$$
+
+where $V_{\rm eff} = \dfrac{\hat{p}_A(1-\hat{p}_A)}{r} + \dfrac{\hat{p}_B(1-\hat{p}_B)}{1-r}$ is a constant
+(it depends only on the observed rates and the fixed ratio). Solving:
 
 $$N_{\rm total,\, goal} = \left\lceil \frac{4 z_*^2 \, V_{\rm eff}}{\omega_{\rm goal}^2} \right\rceil$$
 
-The per-group targets are then recovered by splitting via the same ratio:
+The per-group targets are recovered by splitting via the same ratio:
 
 $$n_{A,\rm goal} = \lceil r \cdot N_{\rm total,\, goal} \rceil, \qquad n_{B,\rm goal} = N_{\rm total,\, goal} - n_{A,\rm goal}$$
+
+<details>
+<summary>💡 Why is N_total,goal four times larger than the single-group formula when p_A = p_B = p and n_A = n_B?</summary>
+
+Why is $$N_{\rm total,\,goal}$$ four times larger than the single-group formula when $\hat{p}_A = \hat{p}_B = p$ and $n_A = n_B$?
+
+With equal groups ($r = 0.5$) and equal proportions ($\hat{p}_A = \hat{p}_B = p$):
+
+$$V_{\rm eff} = \frac{p(1-p)}{0.5} + \frac{p(1-p)}{0.5} = 4\,p(1-p)$$
+
+so $N_{\rm total,\,goal} \approx 16 z_*^2 p(1-p)\,/\,\omega_{\rm goal}^2$, which is 4× the single-group formula $4 z_*^2 p(1-p)\,/\,\omega_{\rm goal}^2$. The factor of 4 comes from two independent doublings:
+
+1. **Half the data per group.** Each group receives only $N_{\rm total}/2$ observations, so
+   each proportion's variance is $p(1-p)/(N_{\rm total}/2) = 2p(1-p)/N_{\rm total}$ — twice as
+   large as if all data went to one group.
+2. **Variances add for differences.** $\operatorname{Var}(\hat{p}_A - \hat{p}_B) = \operatorname{Var}(\hat{p}_A) + \operatorname{Var}(\hat{p}_B)$,
+   doubling the variance a second time.
+
+$2 \times 2 = 4$. This is the unavoidable cost of estimating a *difference* from two
+groups rather than a single proportion from one.
+</details>
 
 This is only an approximation — it assumes the observed rates $\hat{p}_A, \hat{p}_B$ are
 close to the true values. The estimate becomes more reliable as sample size grows.
@@ -179,6 +229,31 @@ narrowest interval containing the specified mass.
 
 **HDI width** is our precision measure. The ePitG algorithm ensures both 
 precision (HDI width < Goal) and conclusiveness (HDI vs ROPE).
+
+---
+
+**Estimating the sample size needed to reach the precision goal**
+
+Under the Student-t posterior, the HDI width also shrinks proportionally to $N^{-1/2}$.
+Using a Normal approximation (valid for moderate to large $n$):
+
+$$\text{HDI width} \approx 2 z_* \sqrt{\frac{V(\mu)}{N}}$$
+
+where $z_*$ is the critical value for the chosen HDI mass (e.g. $z_* \approx 1.96$ for 95%)
+and $V(\mu) = s^2$ is the sample variance, the per-observation variance of the mean
+estimator. Setting HDI width $= \omega_{\rm goal}$ and solving for $N$:
+
+$$N_{\rm goal} \approx \frac{4 z_*^2 \, s^2}{\omega_{\rm goal}^2}$$
+
+Unlike the binary case, $s^2$ has no fixed upper bound — a noisier measurement
+process requires more data to achieve the same precision. Also, the units of measure
+of $$\mu$$, $$s$$ and $$\omega_{\rm goal}$$ are the same (e.g centimeters
+if $$\mu$$ is measures height), so they cancle out when
+calculating $N_{\rm goal}$, which is unitless as expected.
+
+This is an approximation — the exact formula uses the t-distribution quantile
+(which depends on $n$ itself), so for small samples the true requirement is
+slightly larger than $N_{\rm goal}$. For $n \gtrsim 30$ the difference is negligible.
 """
 
 MATHS_CONTINUOUS_BETWEEN_GROUPS = r"""

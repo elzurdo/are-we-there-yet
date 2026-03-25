@@ -754,4 +754,4 @@ def _render_between_groups(inputs: dict):
 
     # --- Maths Tutorial ---
     with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
-        st.markdown(MATHS_BINARY_BETWEEN_GROUPS)
+        st.markdown(MATHS_BINARY_BETWEEN_GROUPS, unsafe_allow_html=True)
