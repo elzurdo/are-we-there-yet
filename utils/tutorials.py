@@ -292,6 +292,33 @@ asymmetry is usually negligible).
 **HDI width** is our precision measure: the ePitG algorithm
 checks whether it's below the precision goal *and* whether
 the HDI is conclusive relative to the ROPE.
+
+---
+
+**Estimating the sample size needed to reach the precision goal**
+
+$\text{SE}^2$ receives an independent contribution from each group because we are
+estimating a *difference* between independent groups, so their variances add.
+This is **not** variance pooling: each group keeps its own $s^2$, and no assumption
+of equal variances is made (consistent with Welch's t).
+
+Let $r = n_A / (n_A + n_B)$ be the current allocation ratio, treated as a fixed constant
+going forward. Writing $n_A = r\,N_{\rm total}$ and $n_B = (1-r)\,N_{\rm total}$:
+
+$$\text{SE}^2 = \frac{s_A^2}{r\,N_{\rm total}} + \frac{s_B^2}{(1-r)\,N_{\rm total}} \;\equiv\; \frac{V_{\rm eff}}{N_{\rm total}}$$
+
+where $V_{\rm eff} = \dfrac{s_A^2}{r} + \dfrac{s_B^2}{1-r}$ is a constant for fixed
+$r$, $s_A$, and $s_B$. Solving:
+
+$$N_{\rm total,\, goal} = \left\lceil \frac{4 z_*^2 \, V_{\rm eff}}{\omega_{\rm goal}^2} \right\rceil$$
+
+The per-group targets are recovered by splitting via the same ratio:
+
+$$n_{A,\rm goal} = \lceil r \cdot N_{\rm total,\, goal} \rceil, \qquad n_{B,\rm goal} = N_{\rm total,\, goal} - n_{A,\rm goal}$$
+
+This is an approximation — it assumes the observed standard deviations $s_A, s_B$ are
+close to the true population values, and uses a Normal rather than t quantile. Both
+assumptions improve as sample size grows.
 """
 
 

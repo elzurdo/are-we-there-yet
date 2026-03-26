@@ -20,7 +20,7 @@ import streamlit as st
 import numpy as np
 from scipy.stats import t as student_t
 
-from utils.stats import continuous_hdi_ci_limits, continuous_difference_hdi, continuous_overlap, CI_FRACTION, estimate_n_goal
+from utils.stats import continuous_hdi_ci_limits, continuous_difference_hdi, continuous_overlap, CI_FRACTION, estimate_n_goal, estimate_n_goal_between_groups_continuous
 from utils.decision import epitg_decision
 from utils.viz import plot_posterior_continuous, plot_posterior_difference, plot_nhst_posterior, plot_two_continuous_posteriors
 from utils.verdict import render_verdict_display
@@ -512,6 +512,17 @@ def _render_between_groups(inputs: dict):
     # --- Verdict ---
     st.divider()
     render_verdict_display(result, precision_goal, fmt, verdict_style)
+
+    # --- Sample size advice (shown only when precision not yet met) ---
+    if not result.precision_met:
+        n_a_goal, n_b_goal, n_a_add, n_b_add = estimate_n_goal_between_groups_continuous(
+            std_a, n_a, std_b, n_b, precision_goal, ci_fraction
+        )
+        st.info(
+            f"📏 **Estimated additional samples needed** (preserving current {n_a}/{n_b} ratio):  \n"
+            f"**{label_a}**: ~{n_a_add:,} more (target ~{n_a_goal:,})  \n"
+            f"**{label_b}**: ~{n_b_add:,} more (target ~{n_b_goal:,})"
+        )
 
     peek_container = (
         st.container()
