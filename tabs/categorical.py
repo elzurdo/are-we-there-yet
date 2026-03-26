@@ -19,6 +19,20 @@ from utils.viz import plot_categorical_forest
 from utils.verdict import render_verdict_display
 
 
+def get_example_values() -> dict:
+    """Return session-state key/value pairs for a worked example."""
+    return {
+        "cat_n_categories": 3,
+        "cat_count_0": 120,
+        "cat_count_1": 95,
+        "cat_count_2": 80,
+        "cat_theta_null": 0.0,
+        "cat_rope_mode": "Full width (symmetric)",
+        "cat_rope_width": 0.10,
+        "cat_precision_goal": 0.08,
+    }
+
+
 def sidebar_inputs() -> dict:
     """Render all Categorical inputs in the sidebar and return a dict of values."""
 
@@ -53,10 +67,8 @@ def sidebar_inputs() -> dict:
             count = st.number_input(
                 "Count",
                 min_value=0,
-                value=100 if i == 0 else 90 + i*5,
-                step=1,
+                value=None,
                 key=f"cat_count_{i}",
-                label_visibility="collapsed"
             )
         
         if name:  # Only add if name is provided
@@ -157,6 +169,10 @@ def render_results(inputs: dict):
 
     if not inputs or not inputs.get("categories"):
         st.info("👈 Configure categorical data in the sidebar to begin")
+        return
+
+    if any(v is None for v in inputs["categories"].values()):
+        st.info("👈 Enter counts for all categories in the sidebar to begin.")
         return
 
     categories = inputs["categories"]
