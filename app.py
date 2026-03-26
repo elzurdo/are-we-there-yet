@@ -49,6 +49,14 @@ def get_package_versions(packages=None):
    return versions
 
 caption_str = "Sequential HypothesisTesting Advisor"
+
+# ── Flush pending example values BEFORE any widgets are instantiated ─────────
+# This must happen before st.sidebar.radio / sidebar_inputs() so that
+# Streamlit sees the new values as the initial state for each widget.
+if "_pending_example" in st.session_state:
+    for _k, _v in st.session_state.pop("_pending_example").items():
+        st.session_state[_k] = _v
+
 # ── Sidebar ──────────────────────────────────────────────────────────
 st.sidebar.title("🚗 Are We There Yet?")
 st.sidebar.caption(caption_str)
@@ -61,6 +69,9 @@ variable_type = st.sidebar.radio(
 
 st.sidebar.divider()
 
+# Check for pending force-commit (set when "📋 Example" is clicked)
+_force_commit = st.session_state.pop("_force_commit", False)
+
 # Collect inputs in sidebar (each module owns its own sidebar widgets)
 if variable_type == "Binary":
     inputs = binary.sidebar_inputs()
@@ -68,6 +79,50 @@ elif variable_type == "Continuous":
     inputs = continuous.sidebar_inputs()
 else:  # Categorical
     inputs = categorical.sidebar_inputs()
+
+# ── Analysis controls ─────────────────────────────────────────────────────
+st.sidebar.divider()
+
+live_update = st.sidebar.checkbox(
+    "⚡ Live update", value=False, key="live_update",
+    help="When on, results refresh as you type. When off, click Analyze.",
+)
+
+_col_analyze, _col_example = st.sidebar.columns(2)
+with _col_analyze:
+    _analyze_clicked = st.button(
+        "🔍 Analyze", type="primary",
+        disabled=live_update, use_container_width=True,
+    )
+with _col_example:
+    _example_clicked = st.button(
+        "📋 Example", use_container_width=True,
+    )
+
+# ── Commit logic ──────────────────────────────────────────────────────────
+_current_commit_key = f"{variable_type}_{inputs.get('analysis_mode', '')}"
+
+if _example_clicked:
+    _mode = inputs.get("analysis_mode", "Single Group")
+    if variable_type == "Binary":
+        _ex = binary.get_example_values(_mode)
+    elif variable_type == "Continuous":
+        _ex = continuous.get_example_values(_mode)
+    else:
+        _ex = categorical.get_example_values()
+    # Stage values — they will be flushed into widget keys at the very top
+    # of the next run, before any widgets are instantiated (avoiding the
+    # "cannot be modified after widget is instantiated" error).
+    st.session_state["_pending_example"] = _ex
+    st.session_state["_force_commit"] = True
+    st.rerun()
+
+if live_update or _force_commit:
+    st.session_state["committed_inputs"] = inputs
+    st.session_state["committed_key"] = _current_commit_key
+elif _analyze_clicked:
+    st.session_state["committed_inputs"] = inputs
+    st.session_state["committed_key"] = _current_commit_key
 
 # ── Sidebar watermark (package versions) ─────────────────────────────────
 try:
@@ -81,9 +136,18 @@ st.sidebar.caption(_compact)
 st.title("Are We There Yet? 🚗")
 st.caption(caption_str)
 
-if variable_type == "Binary":
-    binary.render_results(inputs)
-elif variable_type == "Continuous":
-    continuous.render_results(inputs)
-else:  # Categorical
-    categorical.render_results(inputs)
+_committed_inputs = st.session_state.get("committed_inputs")
+_committed_key = st.session_state.get("committed_key")
+
+if _committed_inputs is not None and _committed_key == _current_commit_key:
+    if variable_type == "Binary":
+        binary.render_results(_committed_inputs)
+    elif variable_type == "Continuous":
+        continuous.render_results(_committed_inputs)
+    else:  # Categorical
+        categorical.render_results(_committed_inputs)
+else:
+    st.info(
+        "👈 Fill in your data in the sidebar, then click **🔍 Analyze** — "
+        "or try **📋 Example** to load sample data instantly."
+    )

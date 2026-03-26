@@ -30,6 +30,35 @@ from utils.tutorials import (
 )
 
 
+def get_example_values(mode: str = "Single Group") -> dict:
+    """Return session-state key/value pairs for a worked example."""
+    if mode == "Between Groups":
+        return {
+            "cont_bg_label_a": "Control",
+            "cont_bg_label_b": "Treatment",
+            "cont_bg_a_mean": 100.0,
+            "cont_bg_a_std": 15.0,
+            "cont_bg_a_n": 30,
+            "cont_bg_b_mean": 107.0,
+            "cont_bg_b_std": 15.0,
+            "cont_bg_b_n": 30,
+            "cont_bg_theta_null": 0.0,
+            "cont_bg_rope_mode": "Full width (symmetric)",
+            "cont_bg_rope_width": 5.0,
+            "cont_bg_precision_goal": 4.0,
+        }
+    # Single Group
+    return {
+        "cont_mean": 100.0,
+        "cont_std": 15.0,
+        "cont_n": 30,
+        "cont_theta_null": 100.0,
+        "cont_rope_mode": "Full width (symmetric)",
+        "cont_rope_width": 10.0,
+        "cont_precision_goal": 8.0,
+    }
+
+
 def sidebar_inputs() -> dict:
     """Render all Continuous inputs in the sidebar and return a dict of values."""
 
@@ -54,15 +83,15 @@ def _sidebar_single_group() -> dict:
     st.sidebar.markdown("### 📊 Data")
 
     sample_mean = st.sidebar.number_input(
-        "Sample mean (x̄)", value=100.0, step=0.1,
+        "Sample mean (x̄)", value=None, step=0.1,
         format="%.4f", key="cont_mean",
     )
     sample_std = st.sidebar.number_input(
-        "Sample std (s)", min_value=0.0001, value=15.0, step=0.1,
+        "Sample std (s)", min_value=0.0001, value=None, step=0.1,
         format="%.4f", key="cont_std",
     )
     n = st.sidebar.number_input(
-        "Sample size (n)", min_value=2, value=30, step=1,
+        "Sample size (n)", min_value=2, value=None, step=1,
         key="cont_n",
     )
 
@@ -162,6 +191,10 @@ def _render_single_group(inputs: dict):
     sample_mean = inputs["sample_mean"]
     sample_std = inputs["sample_std"]
     n = inputs["n"]
+
+    if any(v is None for v in [sample_mean, sample_std, n]):
+        st.info("👈 Enter your data in the sidebar to begin.")
+        return
     rope_min = inputs["rope_min"]
     rope_max = inputs["rope_max"]
     rope_width = inputs["rope_width"]
@@ -315,15 +348,15 @@ def _sidebar_group_inputs(label: str, key_prefix: str) -> dict:
     st.sidebar.markdown(f"#### {label}")
 
     sample_mean = st.sidebar.number_input(
-        "Sample mean (x̄)", value=100.0, step=0.1,
+        "Sample mean (x̄)", value=None, step=0.1,
         format="%.4f", key=f"{key_prefix}_mean",
     )
     sample_std = st.sidebar.number_input(
-        "Sample std (s)", min_value=0.0001, value=15.0, step=0.1,
+        "Sample std (s)", min_value=0.0001, value=None, step=0.1,
         format="%.4f", key=f"{key_prefix}_std",
     )
     n = st.sidebar.number_input(
-        "Sample size (n)", min_value=2, value=30, step=1,
+        "Sample size (n)", min_value=2, value=None, step=1,
         key=f"{key_prefix}_n",
     )
 
@@ -443,6 +476,10 @@ def _render_between_groups(inputs: dict):
 
     mean_a, std_a, n_a = group_a["mean"], group_a["std"], group_a["n"]
     mean_b, std_b, n_b = group_b["mean"], group_b["std"], group_b["n"]
+
+    if any(v is None for v in [mean_a, std_a, n_a, mean_b, std_b, n_b]):
+        st.info("👈 Enter data for both groups in the sidebar to begin.")
+        return
 
     # --- Validation ---
     if n_a < 2 or n_b < 2:

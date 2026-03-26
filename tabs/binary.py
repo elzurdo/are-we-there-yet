@@ -32,6 +32,35 @@ from utils.tutorials import (
 )
 
 
+def get_example_values(mode: str = "Single Group") -> dict:
+    """Return session-state key/value pairs for a worked example."""
+    if mode == "Between Groups":
+        return {
+            "bg_label_a": "Control",
+            "bg_label_b": "Treatment",
+            "bg_a_input_mode": "Successes & Total",
+            "bg_a_total": 200,
+            "bg_a_successes": 100,
+            "bg_b_input_mode": "Successes & Total",
+            "bg_b_total": 200,
+            "bg_b_successes": 120,
+            "bg_theta_null": 0.0,
+            "bg_rope_mode": "Full width (symmetric)",
+            "bg_rope_width": 0.10,
+            "bg_precision_goal": 0.08,
+        }
+    # Single Group
+    return {
+        "binary_input_mode": "Successes & Total",
+        "binary_total": 100,
+        "binary_successes": 50,
+        "binary_theta_null": 0.5,
+        "binary_rope_mode": "Full width (symmetric)",
+        "binary_rope_width": 0.10,
+        "binary_precision_goal": 0.08,
+    }
+
+
 def sidebar_inputs() -> dict:
     """Render all Binary inputs in the sidebar and return a dict of values."""
 
@@ -64,31 +93,31 @@ def _sidebar_single_group() -> dict:
 
     if input_mode == "Successes & Total":
         total = st.sidebar.number_input(
-            "Total trials", min_value=2, value=100, step=1, key="binary_total",
+            "Total trials", min_value=2, value=None, step=1, key="binary_total",
         )
         successes = st.sidebar.number_input(
-            "Successes", min_value=0, max_value=total, value=50, step=1,
+            "Successes", min_value=0, max_value=total, value=None, step=1,
             key="binary_successes",
         )
-        failures = total - successes
+        failures = (total - successes) if (total is not None and successes is not None) else None
     elif input_mode == "Success % & Total":
         total = st.sidebar.number_input(
-            "Total trials", min_value=2, value=100, step=1, key="binary_total_pct",
+            "Total trials", min_value=2, value=None, step=1, key="binary_total_pct",
         )
         success_pct = st.sidebar.number_input(
-            "Success %", min_value=0.0, max_value=100.0, value=50.0, step=0.1,
+            "Success %", min_value=0.0, max_value=100.0, value=None, step=0.1,
             format="%.1f", key="binary_success_pct",
         )
-        successes = int(round(success_pct / 100.0 * total))
-        failures = total - successes
+        successes = int(round(success_pct / 100.0 * total)) if (success_pct is not None and total is not None) else None
+        failures = (total - successes) if (total is not None and successes is not None) else None
     else:
         successes = st.sidebar.number_input(
-            "Successes", min_value=0, value=50, step=1, key="binary_successes_sf",
+            "Successes", min_value=0, value=None, step=1, key="binary_successes_sf",
         )
         failures = st.sidebar.number_input(
-            "Failures", min_value=0, value=50, step=1, key="binary_failures_sf",
+            "Failures", min_value=0, value=None, step=1, key="binary_failures_sf",
         )
-        total = successes + failures
+        total = (successes + failures) if (successes is not None and failures is not None) else None
 
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
 
@@ -186,6 +215,10 @@ def _render_single_group(inputs: dict):
     successes = inputs["successes"]
     failures = inputs["failures"]
     total = inputs["total"]
+
+    if any(v is None for v in [successes, failures, total]):
+        st.info("👈 Enter your data in the sidebar to begin.")
+        return
     rope_min = inputs["rope_min"]
     rope_max = inputs["rope_max"]
     rope_width = inputs["rope_width"]
@@ -433,31 +466,31 @@ def _sidebar_group_inputs(label: str, key_prefix: str) -> dict:
 
     if input_mode == "Successes & Total":
         total = st.sidebar.number_input(
-            "Total trials", min_value=2, value=100, step=1, key=f"{key_prefix}_total",
+            "Total trials", min_value=2, value=None, step=1, key=f"{key_prefix}_total",
         )
         successes = st.sidebar.number_input(
-            "Successes", min_value=0, max_value=total, value=50, step=1,
+            "Successes", min_value=0, max_value=total, value=None, step=1,
             key=f"{key_prefix}_successes",
         )
-        failures = total - successes
+        failures = (total - successes) if (total is not None and successes is not None) else None
     elif input_mode == "Success % & Total":
         total = st.sidebar.number_input(
-            "Total trials", min_value=2, value=100, step=1, key=f"{key_prefix}_total_pct",
+            "Total trials", min_value=2, value=None, step=1, key=f"{key_prefix}_total_pct",
         )
         success_pct = st.sidebar.number_input(
-            "Success %", min_value=0.0, max_value=100.0, value=50.0, step=0.1,
+            "Success %", min_value=0.0, max_value=100.0, value=None, step=0.1,
             format="%.1f", key=f"{key_prefix}_success_pct",
         )
-        successes = int(round(success_pct / 100.0 * total))
-        failures = total - successes
+        successes = int(round(success_pct / 100.0 * total)) if (success_pct is not None and total is not None) else None
+        failures = (total - successes) if (total is not None and successes is not None) else None
     else:
         successes = st.sidebar.number_input(
-            "Successes", min_value=0, value=50, step=1, key=f"{key_prefix}_successes_sf",
+            "Successes", min_value=0, value=None, step=1, key=f"{key_prefix}_successes_sf",
         )
         failures = st.sidebar.number_input(
-            "Failures", min_value=0, value=50, step=1, key=f"{key_prefix}_failures_sf",
+            "Failures", min_value=0, value=None, step=1, key=f"{key_prefix}_failures_sf",
         )
-        total = successes + failures
+        total = (successes + failures) if (successes is not None and failures is not None) else None
 
     return {"successes": successes, "failures": failures, "total": total}
 
@@ -575,6 +608,10 @@ def _render_between_groups(inputs: dict):
 
     n_a, s_a = group_a["total"], group_a["successes"]
     n_b, s_b = group_b["total"], group_b["successes"]
+
+    if any(v is None for v in [n_a, s_a, n_b, s_b]):
+        st.info("👈 Enter data for both groups in the sidebar to begin.")
+        return
 
     # --- Validation ---
     if n_a < 2 or n_b < 2:
