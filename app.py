@@ -151,3 +151,15 @@ else:
         "👈 Fill in your data in the sidebar, then click **🔍 Analyze** — "
         "or try **📋 Example** to load sample data instantly."
     )
+    
+    _is_binary_single = (
+        variable_type == "Binary"
+        and inputs.get("analysis_mode") == "Single Group"
+    )
+    _rope_or_goal_missing = (
+        inputs.get("rope_width") is None or inputs.get("precision_goal") is None
+    )
+    if _is_binary_single and _rope_or_goal_missing:
+        st.warning(
+            "👈 Need help determining ROPE & Precision Goal? Click the 🧭 button in the sidebar."
+        )

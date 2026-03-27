@@ -30,6 +30,7 @@ from utils.tutorials import (
     NHST_LIMITATIONS, MATHS_BINARY_SINGLE_GROUP, MATHS_BINARY_BETWEEN_GROUPS,
     BAYES_FACTOR_INTRO, BAYES_FACTOR_INTERPRETATION,
 )
+from utils.rope_advisor import rope_advisor_dialog_binary_single
 
 
 def get_example_values(mode: str = "Single Group") -> dict:
@@ -136,29 +137,37 @@ def _sidebar_single_group() -> dict:
     if rope_mode == "Full width (symmetric)":
         rope_width = st.sidebar.number_input(
             "ROPE width (Δ_ROPE)", min_value=0.001, max_value=1.0,
-            value=0.10, step=0.01, format="%.3f", key="binary_rope_width",
+            value=None, step=0.01, format="%.3f", key="binary_rope_width",
         )
-        rope_min = theta_null - rope_width / 2
-        rope_max = theta_null + rope_width / 2
+        rope_min = (theta_null - rope_width / 2) if rope_width is not None else None
+        rope_max = (theta_null + rope_width / 2) if rope_width is not None else None
     else:
         rope_min = st.sidebar.number_input(
             "ROPE min", min_value=0.0, max_value=1.0,
-            value=0.45, step=0.01, format="%.4f", key="binary_rope_min",
+            value=None, step=0.01, format="%.4f", key="binary_rope_min",
         )
         rope_max = st.sidebar.number_input(
             "ROPE max", min_value=0.0, max_value=1.0,
-            value=0.55, step=0.01, format="%.4f", key="binary_rope_max",
+            value=None, step=0.01, format="%.4f", key="binary_rope_max",
         )
-        rope_width = rope_max - rope_min
+        rope_width = (rope_max - rope_min) if (rope_min is not None and rope_max is not None) else None
 
     st.sidebar.markdown("### 🔬 Precision Goal")
 
     precision_goal = st.sidebar.number_input(
         "Goal (target HDI width)",
         min_value=0.001, max_value=1.0,
-        value=0.08, step=0.01, format="%.3f", key="binary_precision_goal",
+        value=None, step=0.01, format="%.3f", key="binary_precision_goal",
         help="Must be narrower than the ROPE width for the method to work.",
     )
+
+    if st.sidebar.button(
+        "🧭 Help me choose",
+        key="binary_rope_advisor_btn",
+        help="Answer 3 short questions to get recommended ROPE & precision-goal values.",
+        use_container_width=True,
+    ):
+        rope_advisor_dialog_binary_single(theta_null=theta_null)
 
     ci_fraction = CI_FRACTION
     decimal_places = 3
