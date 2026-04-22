@@ -32,6 +32,8 @@ from utils.tutorials import (
 )
 from utils.rope_advisor import rope_advisor_dialog_binary_single
 
+GOAL_STR = r"$\omega_{\rm goal}$"
+HDI_WIDTH_STR = r"$\omega_{\rm HDI}$"
 
 def get_example_values(mode: str = "Single Group") -> dict:
     """Return session-state key/value pairs for a worked example."""
@@ -313,14 +315,14 @@ def _render_single_group(inputs: dict):
     )
     with peek_container:
         col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m1:
-            st.metric("HDI width", f"{result.hdi_width:{fmt}}",
-                       delta=f"Goal: {precision_goal:{fmt}}",
-                       delta_color="normal" if result.precision_met else "inverse")
         with col_m2:
-            st.metric("HDI", f"[{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]")
+            st.metric(f"HDI width {HDI_WIDTH_STR}", f"{result.hdi_width:{fmt}}",
+                       delta=f"{GOAL_STR}: {precision_goal:{fmt}}",
+                       delta_color="normal" if result.precision_met else "inverse")
+        with col_m1:
+            st.metric("HDI range", f"[{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]")
         with col_m3:
-            st.metric("Observed rate", f"{observed_rate:{fmt}}")
+            st.metric(r"Observed rate $\hat{\theta}$", f"{observed_rate:{fmt}}")
 
         # --- Plot ---
         fig = plot_posterior_binary(result, successes=a, failures=b, decimal_places=dp)
