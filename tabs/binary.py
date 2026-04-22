@@ -31,9 +31,7 @@ from utils.tutorials import (
     BAYES_FACTOR_INTRO, BAYES_FACTOR_INTERPRETATION,
 )
 from utils.rope_advisor import rope_advisor_dialog_binary_single
-
-GOAL_STR = r"$\omega_{\rm goal}$"
-HDI_WIDTH_STR = r"$\omega_{\rm HDI}$"
+from utils.constants import GOAL_STR, HDI_WIDTH_STR
 
 def get_example_values(mode: str = "Single Group") -> dict:
     """Return session-state key/value pairs for a worked example."""

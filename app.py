@@ -48,7 +48,7 @@ def get_package_versions(packages=None):
          versions[pkg] = "unknown"
    return versions
 
-caption_str = "Sequential HypothesisTesting Advisor"
+caption_str = "Sequential Hypothesis Testing Advisor"
 
 # ── Flush pending example values BEFORE any widgets are instantiated ─────────
 # This must happen before st.sidebar.radio / sidebar_inputs() so that

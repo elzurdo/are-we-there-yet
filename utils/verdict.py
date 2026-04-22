@@ -4,6 +4,7 @@ Verdict display utilities for ePitG decision results.
 import streamlit as st
 from utils.decision import Decision, DecisionResult
 
+from utils.constants import GOAL_STR, HDI_WIDTH_STR, GOAL_STR_HTML, HDI_WIDTH_STR_HTML
 
 def render_verdict_display(
     result: DecisionResult, 
@@ -37,14 +38,14 @@ def render_verdict_display(
             st.markdown(
                 f"<div style='text-align: center; font-size: 1.2em; margin: 10px 0; "
                 f"color: {color};'>"
-                f"<strong>HDI &gt; Goal</strong><br>"
+                f"<strong>{HDI_WIDTH_STR_HTML} &gt; {GOAL_STR_HTML}</strong><br>"
                 f"<code style='font-size: 1.1em; color: {color};'>{result.hdi_width:{fmt}} &gt; {precision_goal:{fmt}}</code>"
                 f"</div>",
                 unsafe_allow_html=True
             )
         else:  # Info/Warning box
             st.warning(
-                f"**HDI > Goal**  \n"
+                f"**{HDI_WIDTH_STR} > {GOAL_STR}**  \n"
                 f"`{result.hdi_width:{fmt}} > {precision_goal:{fmt}}`"
             )
     
@@ -54,7 +55,7 @@ def render_verdict_display(
             st.markdown(
                 f"<div style='text-align: center; font-size: 1.2em; margin: 10px 0; "
                 f"color: {color};'>"
-                f"<strong>HDI {comparison} Goal</strong> (precision met)<br>"
+                f"<strong>{HDI_WIDTH_STR_HTML} {comparison} {GOAL_STR_HTML}</strong> (precision met)<br>"
                 f"<code style='font-size: 1.1em; color: {color};'>{result.hdi_width:{fmt}} {comparison} {precision_goal:{fmt}}</code><br>"
                 f"<em style='font-size: 0.9em;'>but HDI straddles ROPE</em>"
                 f"</div>",
@@ -62,7 +63,7 @@ def render_verdict_display(
             )
         else:  # Info/Warning box
             st.warning(
-                f"**HDI {comparison} Goal** (precision met)  \n"
+                f"**{HDI_WIDTH_STR} {comparison} {GOAL_STR}** (precision met)  \n"
                 f"`{result.hdi_width:{fmt}} {comparison} {precision_goal:{fmt}}`  \n"
                 f"*but HDI straddles ROPE*"
             )
