@@ -358,31 +358,33 @@ def _plot_posterior(x, y, result: DecisionResult, x_bounds=None, decimal_places:
 
     fig, ax = plt.subplots(figsize=(8, 4))
 
-    # Plot PDF
-    ax.plot(x, y, color="steelblue", linewidth=2)
-
-    # Shade HDI region
-    hdi_mask = (x >= result.hdi_min) & (x <= result.hdi_max)
-    ax.fill_between(x, y, where=hdi_mask, alpha=0.3, color="steelblue",
-                    label=f"{result.ci_fraction:.0%} HDI")
-
     # ROPE region
     ax.axvspan(result.rope_min, result.rope_max, alpha=0.12, color="gray",
                label="ROPE")
     ax.axvline(result.rope_min, color="gray", linestyle="--", linewidth=1, alpha=0.7)
     ax.axvline(result.rope_max, color="gray", linestyle="--", linewidth=1, alpha=0.7)
 
-    # HDI boundaries
-    ax.axvline(result.hdi_min, color="steelblue", linestyle=":", linewidth=1.5, alpha=0.8)
-    ax.axvline(result.hdi_max, color="steelblue", linestyle=":", linewidth=1.5, alpha=0.8)
+    # Plot PDF
+    ax.plot(x, y, color="purple", linewidth=2)
+
+    # Shade HDI region
+    hdi_mask = (x >= result.hdi_min) & (x <= result.hdi_max)
+    ax.fill_between(x, y, where=hdi_mask, alpha=0.3, color="purple",
+                    label=f"{result.ci_fraction:.0%} HDI")
+
+
+    # HDI boundaries: No need to much clutter
+    #ax.axvline(result.hdi_min, color="purple", linestyle=":", linewidth=1.5, alpha=0.8)
+    #ax.axvline(result.hdi_max, color="purple", linestyle=":", linewidth=1.5, alpha=0.8)
 
     # Point estimate
-    ax.axvline(result.point_estimate, color="darkblue", linestyle="-", linewidth=1.5,
-               alpha=0.6, label=f"Estimate = {result.point_estimate:{fmt}}")
+    estimate_str = r"$\hat{\theta}$"
+    ax.axvline(result.point_estimate, color="purple", linestyle="-", linewidth=1.5,
+               alpha=0.9, label=f"{estimate_str} = {result.point_estimate:{fmt}}")
 
     # Annotations
     y_max = ax.get_ylim()[1]
-    ax.annotate(f"HDI: [{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]",
+    ax.annotate(f"HDI : [{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]",
                 xy=(0.02, 0.95), xycoords="axes fraction",
                 fontsize=9, color="steelblue", verticalalignment="top")
 
@@ -391,7 +393,9 @@ def _plot_posterior(x, y, result: DecisionResult, x_bounds=None, decimal_places:
                 fontsize=9, color="gray", verticalalignment="top")
 
     # Title with verdict
-    verdict_text = f"{display['emoji']} {display['label']}"
+    # TODO: look into why the emoji doesn't display
+    # verdict_text = f"{display['emoji']} {display['label']}"
+    verdict_text = f"{display['label']}"
     ax.set_title(verdict_text, fontsize=14, fontweight="bold",
                  color=display["color"])
 
