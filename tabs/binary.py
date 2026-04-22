@@ -31,7 +31,7 @@ from utils.tutorials import (
     BAYES_FACTOR_INTRO, BAYES_FACTOR_INTERPRETATION,
 )
 from utils.rope_advisor import rope_advisor_dialog_binary_single
-from utils.constants import BINARY_SINGLE_PARAMETER_ESTIMATE_STR, GOAL_STR, HDI_WIDTH_STR, ROPE_WIDTH_STR
+from utils.constants import BINARY_SINGLE_PARAMETER_ESTIMATE_STR, GOAL_STR, HDI_WIDTH_STR, ROPE_WIDTH_STR, BINARY_SINGLE_NULL_STR
 
 def get_example_values(mode: str = "Single Group") -> dict:
     """Return session-state key/value pairs for a worked example."""
@@ -122,9 +122,11 @@ def _sidebar_single_group() -> dict:
 
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
 
+    if "binary_theta_null" not in st.session_state:
+        st.session_state["binary_theta_null"] = 0.5
     theta_null = st.sidebar.number_input(
-        "Null hypothesis (θ_null)", min_value=0.0, max_value=1.0,
-        value=0.5, step=0.01, format="%.4f", key="binary_theta_null",
+        f"Null hypothesis ({BINARY_SINGLE_NULL_STR})", min_value=0.0, max_value=1.0,
+        step=0.01, format="%.4f", key="binary_theta_null",
     )
 
     rope_mode = st.sidebar.radio(
@@ -136,7 +138,7 @@ def _sidebar_single_group() -> dict:
 
     if rope_mode == "Full width (symmetric)":
         rope_width = st.sidebar.number_input(
-            "ROPE width (Δ_ROPE)", min_value=0.001, max_value=1.0,
+            rf"ROPE width {ROPE_WIDTH_STR}", min_value=0.001, max_value=1.0,
             value=None, step=0.01, format="%.3f", key="binary_rope_width",
         )
         rope_min = (theta_null - rope_width / 2) if rope_width is not None else None
@@ -155,10 +157,10 @@ def _sidebar_single_group() -> dict:
     st.sidebar.markdown("### 🔬 Precision Goal")
 
     precision_goal = st.sidebar.number_input(
-        "Goal (target HDI width)",
+        f"Precision Goal {GOAL_STR} (i.e, target HDI width {HDI_WIDTH_STR})",
         min_value=0.001, max_value=1.0,
         value=None, step=0.01, format="%.3f", key="binary_precision_goal",
-        help="Must be narrower than the ROPE width for the method to work.",
+        help=rf"Must be narrower than the ROPE width {ROPE_WIDTH_STR}.",
     )
 
     if st.sidebar.button(
@@ -509,11 +511,14 @@ def _sidebar_between_groups() -> dict:
 
     st.sidebar.markdown("### 📊 Data")
 
+    for key, default in [("bg_label_a", "Group A"), ("bg_label_b", "Group B")]:
+        if key not in st.session_state:
+            st.session_state[key] = default
     col_la, col_lb = st.sidebar.columns(2)
     with col_la:
-        label_a = st.text_input("Label A", value="Group A", key="bg_label_a")
+        label_a = st.text_input("Label A", key="bg_label_a")
     with col_lb:
-        label_b = st.text_input("Label B", value="Group B", key="bg_label_b")
+        label_b = st.text_input("Label B", key="bg_label_b")
     if not label_a.strip():
         label_a = "Group A"
     if not label_b.strip():
@@ -524,9 +529,11 @@ def _sidebar_between_groups() -> dict:
 
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
 
+    if "bg_theta_null" not in st.session_state:
+        st.session_state["bg_theta_null"] = 0.0
     theta_null = st.sidebar.number_input(
         "Null hypothesis (δ₀ = p_A − p_B)", min_value=-1.0, max_value=1.0,
-        value=0.0, step=0.01, format="%.4f", key="bg_theta_null",
+        step=0.01, format="%.4f", key="bg_theta_null",
     )
 
     rope_mode = st.sidebar.radio(
@@ -537,9 +544,11 @@ def _sidebar_between_groups() -> dict:
     )
 
     if rope_mode == "Full width (symmetric)":
+        if "bg_rope_width" not in st.session_state:
+            st.session_state["bg_rope_width"] = 0.10
         rope_width = st.sidebar.number_input(
             "ROPE width (Δ_ROPE)", min_value=0.001, max_value=2.0,
-            value=0.10, step=0.01, format="%.3f", key="bg_rope_width",
+            step=0.01, format="%.3f", key="bg_rope_width",
         )
         rope_min = theta_null - rope_width / 2
         rope_max = theta_null + rope_width / 2
@@ -556,10 +565,12 @@ def _sidebar_between_groups() -> dict:
 
     st.sidebar.markdown("### 🔬 Precision Goal")
 
+    if "bg_precision_goal" not in st.session_state:
+        st.session_state["bg_precision_goal"] = 0.08
     precision_goal = st.sidebar.number_input(
         "Goal (target HDI width)",
         min_value=0.001, max_value=2.0,
-        value=0.08, step=0.01, format="%.3f", key="bg_precision_goal",
+        step=0.01, format="%.3f", key="bg_precision_goal",
         help="Must be narrower than the ROPE width for the method to work.",
     )
 
