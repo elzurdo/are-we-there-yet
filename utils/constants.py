@@ -10,4 +10,5 @@ ROPE_WIDTH_STR_HTML = "Δ<sub>ROPE</sub>"
 
 BINARY_SINGLE_PARAMETER_ESTIMATE_STR = r"$\hat{\theta}$"
 # BINARY_SINGLE_PARAMETER_ESTIMATE_STR_HTML = "&theta;<sub>hat</sub>"
+# delete this line.
 
