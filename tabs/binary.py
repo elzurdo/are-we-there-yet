@@ -31,7 +31,7 @@ from utils.tutorials import (
     BAYES_FACTOR_INTRO, BAYES_FACTOR_INTERPRETATION,
 )
 from utils.rope_advisor import rope_advisor_dialog_binary_single
-from utils.constants import GOAL_STR, HDI_WIDTH_STR
+from utils.constants import BINARY_SINGLE_PARAMETER_ESTIMATE_STR, GOAL_STR, HDI_WIDTH_STR, ROPE_WIDTH_STR
 
 def get_example_values(mode: str = "Single Group") -> dict:
     """Return session-state key/value pairs for a worked example."""
@@ -248,7 +248,7 @@ def _render_single_group(inputs: dict):
         st.warning("ROPE bounds must be within [0, 1] for binary data.")
         return
     if precision_goal >= rope_width:
-        st.warning("Precision goal must be narrower than the ROPE width.")
+        st.warning(f"Precision goal {GOAL_STR} must be narrower than the ROPE width.")
         return
 
     observed_rate = successes / total if total > 0 else 0.0
@@ -261,18 +261,18 @@ def _render_single_group(inputs: dict):
         st.markdown(
             f"**Data**  \n"
             f"{successes} successes / {total} total  \n"
-            f"Rate = {observed_rate:{fmt}}"
+            f"Rate {BINARY_SINGLE_PARAMETER_ESTIMATE_STR} = {observed_rate:{fmt}}"
         )
     with col_s2:
         st.markdown(
             f"**ROPE**  \n"
-            f"[{rope_min:{fmt}}, {rope_max:{fmt}}]  \n"
-            f"Width = {rope_width:{fmt}}"
+            f"Range: [{rope_min:{fmt}}, {rope_max:{fmt}}]  \n"
+            f"Width {ROPE_WIDTH_STR} = {rope_width:{fmt}}"
         )
     with col_s3:
         st.markdown(
-            f"**Precision Goal**  \n"
-            f"{precision_goal:{fmt}}  \n"
+            f"**Posterior Requirements**  \n"
+            f"Precision Goal {GOAL_STR} = {precision_goal:{fmt}}  \n"
             f"HDI mass = {ci_fraction:.0%}"
         )
 
@@ -303,7 +303,7 @@ def _render_single_group(inputs: dict):
         st.info(
             f"📏 **Estimated additional samples needed: ~{n_additional:,}** "
             f"(target total: ~{n_goal:,}), based on the current observed rate "
-            f"of {observed_rate:{fmt}}."
+            f"of {BINARY_SINGLE_PARAMETER_ESTIMATE_STR}={observed_rate:{fmt}}."
         )
 
     peek_container = (
