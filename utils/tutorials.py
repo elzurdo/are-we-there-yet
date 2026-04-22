@@ -338,12 +338,30 @@ BF₁₀ = P(data | H₁) / P(data | H₀)
 # Glossary
 # ──────────────────────────────────────────────────────────────
 
+# TODO: add entries for:
+# ROPE
+# HDI
 GLOSSARY_TABLE = """
 <table>
   <thead>
     <tr><th>Term</th><th>Definition</th><th>Role</th></tr>
   </thead>
   <tbody>
+    <tr>
+      <td>&theta;<sub>null</sub></td>
+      <td>Null value</td>
+      <td>The hypothesised reference proportion (e.g. 0.5 for a fair coin). The ROPE region must contain this value.</td>
+    </tr>
+    <tr>
+      <td>&theta;&#x0302;</td>
+      <td>Observed proportion</td>
+      <td>Point estimate of the true proportion from the current sample: &theta;&#x0302; = s / n.</td>
+    </tr>
+    <tr>
+      <td>Δ<sub>ROPE</sub></td>
+      <td>ROPE Width</td>
+      <td>Δ<sub>ROPE</sub> = ROPE<sub>max</sub> − ROPE<sub>min</sub>. Effects inside this band are considered practically equivalent to the null.</td>
+    </tr>
     <tr>
       <td>ω<sub>goal</sub></td>
       <td>Precision Goal</td>
@@ -353,11 +371,6 @@ GLOSSARY_TABLE = """
       <td>ω<sub>HDI</sub></td>
       <td>HDI Width</td>
       <td>Actual posterior width of the current sample. <br>Stopping requires ω<sub>HDI</sub> ≤ ω<sub>goal</sub>.</td>
-    </tr>
-    <tr>
-      <td>Δ<sub>ROPE</sub></td>
-      <td>ROPE Width</td>
-      <td>Δ<sub>ROPE</sub> = ROPE<sub>max</sub> − ROPE<sub>min</sub>.</td>
     </tr>
   </tbody>
 </table>

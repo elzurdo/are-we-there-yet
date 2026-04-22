@@ -11,6 +11,15 @@ Add new entries to DOMAIN_PRESETS to extend domain support without touching
 the dialog logic.
 """
 import streamlit as st
+from utils.constants import (
+    BINARY_SINGLE_MIN_EFFECT_STR,
+    BINARY_SINGLE_NULL_STR,
+    GOAL_STR,
+    HDI_WIDTH_STR,
+    ROPE_WIDTH_STR,
+    BINARY_SINGLE_NULL_STR,
+    BINARY_SINGLE_OBSERVE_STR,
+)
 
 # ── Domain presets ────────────────────────────────────────────────────────────
 # Each entry maps to a dict with:
@@ -35,6 +44,11 @@ DOMAIN_PRESETS = {
         "precision_pct": 75,
     },
 }
+
+# Radio option strings — defined as module-level constants so the comparison
+# in Step 3 stays in sync with the widget options list.
+_FRACTION_MODE = f"As a fraction of {ROPE_WIDTH_STR} (width of my null equivalence zone)"
+_ABSOLUTE_MODE = "As an absolute width"
 
 
 @st.dialog("🧭 Help me choose ROPE & Precision Goal", width="large")
@@ -67,23 +81,24 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
     st.divider()
 
     # ── Step 1 — Minimum meaningful difference ────────────────────────────────
-    st.markdown("#### Step 1 — Smallest effect that matters")
+    st.markdown(f"#### Step 1 — Smallest effect that matters ({BINARY_SINGLE_MIN_EFFECT_STR})")
     st.markdown(
-        "What's the smallest change in proportion your team would actually act on?  \n"
-        "*e.g. If your baseline is 50% and a shift to 52% would change a decision, enter **2** (the minimum meaningful shift around each side of the null).*  \n"
-        "The ROPE — **Region of Practical Equivalence** — spans ±this value around your null, "
-        "giving a **total ROPE width of twice this amount**."
+        f"What's the smallest change in proportion your team would actually act on?  \n"
+        f"*e.g. If your baseline is {BINARY_SINGLE_NULL_STR} = 0.50 and a shift to {BINARY_SINGLE_OBSERVE_STR} =0.52 would change a decision, enter **2** (percentage points) "
+        f"({BINARY_SINGLE_MIN_EFFECT_STR} = 0.02 — the minimum meaningful shift around each side of the null).*  \n"
+        f"The ROPE — **Region of Practical Equivalence** — spans ±{BINARY_SINGLE_MIN_EFFECT_STR} around "
+        f"{BINARY_SINGLE_NULL_STR}, giving {ROPE_WIDTH_STR} = 2{BINARY_SINGLE_MIN_EFFECT_STR}."
     )
 
     default_diff = float(preset["min_meaningful_diff_pct"]) if preset else None
     min_diff_pct = st.number_input(
-        "Minimum meaningful shift around each side of the null (percentage points)",
+        f"Minimum meaningful {BINARY_SINGLE_MIN_EFFECT_STR} around each side of {BINARY_SINGLE_NULL_STR} (percentage points)",
         min_value=0.01,
         max_value=50.0,
         value=default_diff,
         step=0.5,
         format="%.2f",
-        help="The ROPE spans ±this value around your null. Total ROPE width = 2 × this value.",
+        help=f"The ROPE spans ±{BINARY_SINGLE_MIN_EFFECT_STR} around {BINARY_SINGLE_NULL_STR}. {ROPE_WIDTH_STR} = 2{BINARY_SINGLE_MIN_EFFECT_STR}.",
         key="_advisor_min_diff_pct",
     )
 
@@ -97,18 +112,19 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         rope_max_preview = theta_null + rope_width / 2
         st.caption(
             f"→ ROPE = [{rope_min_preview:.4f}, {rope_max_preview:.4f}]"
-            f"  (width = {rope_width:.4f})"
+            f"  ({ROPE_WIDTH_STR} = {rope_width:.4f})"
         )
 
     st.divider()
 
     # ── Step 2 — Precision goal framing ──────────────────────────────────────
     st.markdown("#### Step 2 — How do you want to express outcome precision?")
-    st.markdown("Think of *precision* as the width of the bell curve (the posterior) that you'd be happy to stop the experiment under.  \n"
-                 "A narrower curve means you're more confident about where the true effect lies but at a cost of more data collection.  \n"
-                "This is called the **Precision Goal**: the posterior width for stopping.  \n"
-                "It is independent of the ROPE location but must be narrower than the ROPE width."
-                )
+    st.markdown(
+        f"Think of *precision* as the width of the bell curve (the posterior) that you'd be happy to stop the experiment under.  \n"
+        f"A narrower curve means you're more confident about where the true effect lies but at a cost of more data collection.  \n"
+        f"This is called the **Precision Goal** ({GOAL_STR}): the target for {HDI_WIDTH_STR} at stopping.  \n"
+        f"It is independent of the ROPE location but dependent on width {GOAL_STR}≤{ROPE_WIDTH_STR}."
+    )
 
     # Build captions with live numbers where possible
     _eg_rope = rope_width if rope_width is not None else 0.04
@@ -116,13 +132,12 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
     _eg_abs = round(_eg_rope * _eg_pct / 100, 4)
 
     fraction_caption = (
-        f"*e.g. If your ROPE width is {_eg_rope:.4f} and you choose {_eg_pct}%, "
-        f"you'll stop when the posterior width is narrower than {_eg_abs:.4f} — "
-        f"you know the true effect to within {_eg_pct}% of what you'd consider practically equivalent to the null.*"
+        f"*e.g. If {ROPE_WIDTH_STR} = {_eg_rope:.4f} and you choose {_eg_pct}%, "
+        f"you'll stop when {HDI_WIDTH_STR} ≤ {_eg_abs:.4f}"
     )
     absolute_caption = (
-        "*e.g. \"I want the posterior width to be no wider than 0.05 in absolute terms\" — "
-        "useful when you have a hard reporting requirement like ±2.5 pp. This must be smaller than the ROPE width.*"
+        f"*e.g. \"I want {HDI_WIDTH_STR} to be no wider than 0.05 in absolute terms\" — "
+        f"useful when you have a hard reporting requirement like ±2.5 pp. This requires {GOAL_STR} ≤ {ROPE_WIDTH_STR}.*"
     )
 
     default_mode_idx = 0
@@ -130,11 +145,8 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         default_mode_idx = 1
 
     precision_mode = st.radio(
-        "Express the precision goal:",
-        options=[
-            "As a fraction of the ROPE width (with of my null equivalence zone)",  # rephrase to avoid repeating "ROPE" in the caption
-            "As an absolute width",
-        ],
+        f"Express {GOAL_STR}:",
+        options=[_FRACTION_MODE, _ABSOLUTE_MODE],
         index=default_mode_idx,
         captions=[fraction_caption, absolute_caption],
         key="_advisor_precision_mode",
@@ -147,10 +159,10 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
 
     precision_goal = None
 
-    if precision_mode == "As a fraction of the ROPE width (with of my null equivalence zone)":
+    if precision_mode == _FRACTION_MODE:
         default_pct = int(preset["precision_pct"]) if preset and "precision_pct" in preset else 80
         precision_pct = st.slider(
-            "Precision as % of ROPE width",
+            f"{GOAL_STR} as % of {ROPE_WIDTH_STR}",
             min_value=50,
             max_value=99,
             value=default_pct,
@@ -161,24 +173,24 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         if rope_width is not None:
             precision_goal = rope_width * precision_pct / 100.0
             st.caption(
-                f"→ {rope_width:.4f} × {precision_pct}% = **{precision_goal:.4f}**"
+                f"→ {ROPE_WIDTH_STR} × {precision_pct}% = {GOAL_STR} = **{precision_goal:.4f}**"
             )
         else:
             st.caption("→ Complete Step 1 first to see the computed value.")
     else:
         precision_abs_pct = st.number_input(
-            "Target HDI width (percentage points)",
+            f"Target {GOAL_STR} in percentage points. Requires {GOAL_STR} ≤ {ROPE_WIDTH_STR}.",
             min_value=0.01,
             max_value=50.0,
             value=None,
             step=0.5,
             format="%.2f",
-            help="The posterior width must be narrower than this for the experiment to stop.",
+            help=f"{HDI_WIDTH_STR} ≤ {GOAL_STR} for the experiment to stop.",
             key="_advisor_precision_abs_pct",
         )
         if precision_abs_pct is not None:
             precision_goal = precision_abs_pct / 100.0
-            st.caption(f"→ Precision goal = **{precision_goal:.4f}**")
+            st.caption(f"→ {GOAL_STR} = **{precision_goal:.4f}**")
 
     st.divider()
 
@@ -189,17 +201,17 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
     if all_ready:
         if goal_too_wide:
             st.warning(
-                f"⚠️ Precision goal ({precision_goal:.4f}) must be **narrower** than the "
-                f"ROPE width ({rope_width:.4f}) for the stopping rule to be meaningful. "
+                f"⚠️ {GOAL_STR} ({precision_goal:.4f}) must be **narrower** than "
+                f"{ROPE_WIDTH_STR} ({rope_width:.4f}) for the stopping rule to be meaningful. "
                 "Increase the fraction or reduce the absolute width."
             )
         else:
             st.success(
-                f"**ROPE:** ±{min_diff_pct:.2f} pp around your null "
+                f"**ROPE:** {BINARY_SINGLE_NULL_STR} ± {BINARY_SINGLE_MIN_EFFECT_STR} ({min_diff_pct:.2f} pp) "
                 f"→ [{theta_null - rope_width/2:.4f}, {theta_null + rope_width/2:.4f}]"
-                f"  (width = {rope_width:.4f})  \n"
-                f"**Precision goal:** stop when 95% HDI is narrower than "
-                f"**{precision_goal:.4f}** ({precision_goal * 100:.2f} pp)"
+                f"  ({ROPE_WIDTH_STR} = {rope_width:.4f})  \n"
+                f"**Precision goal:** stop when {HDI_WIDTH_STR} < "
+                f"{GOAL_STR} = **{precision_goal:.4f}** ({precision_goal * 100:.2f} pp)"
             )
     else:
         st.info("Complete Steps 1–3 above to see a preview.")

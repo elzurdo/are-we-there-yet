@@ -157,10 +157,10 @@ def _sidebar_single_group() -> dict:
     st.sidebar.markdown("### 🔬 Precision Goal")
 
     precision_goal = st.sidebar.number_input(
-        f"Precision Goal {GOAL_STR} (i.e, target HDI width {HDI_WIDTH_STR})",
+        f"Precision Goal {GOAL_STR}",
         min_value=0.001, max_value=1.0,
         value=None, step=0.01, format="%.3f", key="binary_precision_goal",
-        help=rf"Must be narrower than the ROPE width {ROPE_WIDTH_STR}.",
+        help=f"This is the target width of {HDI_WIDTH_STR}.\n Requires {GOAL_STR} ≤ {ROPE_WIDTH_STR}.",
     )
 
     if st.sidebar.button(

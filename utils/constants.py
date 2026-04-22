@@ -10,6 +10,11 @@ ROPE_WIDTH_STR_HTML = "Δ<sub>ROPE</sub>"
 
 BINARY_SINGLE_PARAMETER_ESTIMATE_STR = r"$\hat{\theta}$"
 # BINARY_SINGLE_PARAMETER_ESTIMATE_STR_HTML = "&theta;<sub>hat</sub>"
-# delete this line.
 
 BINARY_SINGLE_NULL_STR = r"$\theta_{\rm null}$"
+BINARY_SINGLE_NULL_STR_HTML = "&theta;<sub>null</sub>"
+BINARY_SINGLE_OBSERVE_STR = r"$\hat{\theta}$"
+
+
+BINARY_SINGLE_MIN_EFFECT_STR = r"$\delta\theta$"
+BINARY_SINGLE_MIN_EFFECT_STR_HTML = "δθ"
