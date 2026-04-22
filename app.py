@@ -20,6 +20,7 @@ st.set_page_config(
 )
 
 from tabs import binary, continuous, categorical
+from utils.tutorials import GLOSSARY_TABLE
 
 
 # Putting here because for some reason
@@ -163,3 +164,6 @@ else:
         st.warning(
             "👈 Need help determining ROPE & Precision Goal? Click the 🧭 button in the sidebar."
         )
+
+with st.expander("📖 Glossary"):
+    st.markdown(GLOSSARY_TABLE, unsafe_allow_html=True)

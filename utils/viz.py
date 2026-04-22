@@ -386,7 +386,7 @@ def _plot_posterior(x, y, result: DecisionResult, x_bounds=None, decimal_places:
     y_max = ax.get_ylim()[1]
     ax.annotate(f"HDI : [{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]",
                 xy=(0.02, 0.95), xycoords="axes fraction",
-                fontsize=9, color="steelblue", verticalalignment="top")
+                fontsize=9, color="purple", verticalalignment="top")
 
     ax.annotate(f"ROPE: [{result.rope_min:{fmt}}, {result.rope_max:{fmt}}]",
                 xy=(0.02, 0.88), xycoords="axes fraction",

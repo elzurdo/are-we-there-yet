@@ -334,6 +334,35 @@ BAYES_FACTOR_INTRO = """
 BF₁₀ = P(data | H₁) / P(data | H₀)
 """
 
+# ──────────────────────────────────────────────────────────────
+# Glossary
+# ──────────────────────────────────────────────────────────────
+
+GLOSSARY_TABLE = """
+<table>
+  <thead>
+    <tr><th>Term</th><th>Definition</th><th>Role</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ω<sub>goal</sub></td>
+      <td>Precision Goal</td>
+      <td>Target posterior width used as a stopping criterion.<br>By definition ω<sub>goal</sub> ≤ Δ<sub>ROPE</sub>.</td>
+    </tr>
+    <tr>
+      <td>ω<sub>HDI</sub></td>
+      <td>HDI Width</td>
+      <td>Actual posterior width of the current sample. <br>Stopping requires ω<sub>HDI</sub> ≤ ω<sub>goal</sub>.</td>
+    </tr>
+    <tr>
+      <td>Δ<sub>ROPE</sub></td>
+      <td>ROPE Width</td>
+      <td>Δ<sub>ROPE</sub> = ROPE<sub>max</sub> − ROPE<sub>min</sub>.</td>
+    </tr>
+  </tbody>
+</table>
+"""
+
 BAYES_FACTOR_INTERPRETATION = """
 **Interpretation:**
 - **BF₁₀ > 1**: Data favor H₁ (effect exists)
