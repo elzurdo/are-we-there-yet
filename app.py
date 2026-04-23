@@ -137,6 +137,13 @@ st.sidebar.caption(_compact)
 st.title("Are We There Yet? 🚗")
 st.caption(caption_str)
 
+st.markdown(
+    "This calculator helps you decide when to stop your experiment using the **DPitG** "
+    "(Decisive Precision is the Goal) sequential testing algorithm. "
+    "Enter your summary statistics, define the expected effect size (via the ROPE: Region of Practical Equivalence) and Precision Goal, "
+    "and get a empirical stopping verdict."
+)
+
 _committed_inputs = st.session_state.get("committed_inputs")
 _committed_key = st.session_state.get("committed_key")
 
@@ -167,3 +174,11 @@ else:
 
 with st.expander("📖 Glossary"):
     st.markdown(GLOSSARY_TABLE, unsafe_allow_html=True)
+
+st.info(
+    "**When is DPitG most useful?** It shines when data collection is relatively cheap and the budget "
+    "comfortably covers the required sample. For expensive settings — clinical trials, longitudinal studies, "
+    "costly policy evaluations — it still provides value as a diagnostic: it makes explicit what precision is "
+    "achievable within the available budget, enabling an honest assessment of what the data can and cannot support. "
+    "You can also examine results using *p*-values and Bayes Factors within dedicated tabs."
+)
