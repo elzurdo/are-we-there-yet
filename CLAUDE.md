@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 **Are We There Yet?** is a Streamlit web app implementing the **ePitG (Enhanced Precision is the Goal)** sequential hypothesis testing algorithm. It allows users to input summary statistics and receive a stopping verdict based on two combined criteria:
-1. **Precision**: HDI width < precision goal
+1. **Precision**: HDI width ≤ precision goal
 2. **Location**: HDI fully inside or outside the ROPE (Region of Practical Equivalence)
 
 ## Commands

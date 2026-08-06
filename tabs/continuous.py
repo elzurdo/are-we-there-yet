@@ -133,7 +133,7 @@ def _sidebar_single_group() -> dict:
         "Goal (target HDI width)",
         min_value=0.001,
         value=8.0, step=0.1, format="%.3f", key="cont_precision_goal",
-        help="Must be narrower than the ROPE width for the method to work.",
+        help="Must not exceed the ROPE width for the method to work.",
     )
 
     ci_fraction = CI_FRACTION
@@ -208,8 +208,8 @@ def _render_single_group(inputs: dict):
     if rope_min >= rope_max:
         st.warning("ROPE min must be less than ROPE max.")
         return
-    if precision_goal >= rope_width:
-        st.warning("Precision goal must be narrower than the ROPE width.")
+    if precision_goal > rope_width:
+        st.warning("Precision goal must not exceed the ROPE width.")
         return
 
     # --- Input summary ---
@@ -419,7 +419,7 @@ def _sidebar_between_groups() -> dict:
         "Goal (target HDI width)",
         min_value=0.001,
         value=4.0, step=0.1, format="%.3f", key="cont_bg_precision_goal",
-        help="Must be narrower than the ROPE width for the method to work.",
+        help="Must not exceed the ROPE width for the method to work.",
     )
 
     ci_fraction = CI_FRACTION
@@ -488,8 +488,8 @@ def _render_between_groups(inputs: dict):
     if rope_min >= rope_max:
         st.warning("ROPE min must be less than ROPE max.")
         return
-    if precision_goal >= rope_width:
-        st.warning("Precision goal must be narrower than the ROPE width.")
+    if precision_goal > rope_width:
+        st.warning("Precision goal must not exceed the ROPE width.")
         return
 
     delta = mean_a - mean_b

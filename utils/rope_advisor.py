@@ -196,12 +196,12 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
 
     # ── Preview ───────────────────────────────────────────────────────────────
     all_ready = rope_width is not None and precision_goal is not None
-    goal_too_wide = all_ready and precision_goal >= rope_width
+    goal_too_wide = all_ready and precision_goal > rope_width
 
     if all_ready:
         if goal_too_wide:
             st.warning(
-                f"⚠️ {GOAL_STR} ({precision_goal:.4f}) must be **narrower** than "
+                f"⚠️ {GOAL_STR} ({precision_goal:.4f}) must **not exceed** "
                 f"{ROPE_WIDTH_STR} ({rope_width:.4f}) for the stopping rule to be meaningful. "
                 "Increase the fraction or reduce the absolute width."
             )

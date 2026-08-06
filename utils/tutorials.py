@@ -25,7 +25,7 @@ NHST_LIMITATIONS = """
    too small to matter." The ROPE addresses this directly.
 
 **ePitG combines:**
-- **Precision** (HDI width < Goal) — ensures your estimate is narrow enough
+- **Precision** (HDI width ≤ Goal) — ensures your estimate is narrow enough
 - **Location** (HDI vs ROPE) — ensures you can make a conclusive decision about practical significance
 
 This gives you both statistical confidence *and* practical interpretability.
@@ -228,7 +228,7 @@ As $n \to \infty$, the t-distribution converges to Normal.
 narrowest interval containing the specified mass.
 
 **HDI width** is our precision measure. The ePitG algorithm ensures both 
-precision (HDI width < Goal) and conclusiveness (HDI vs ROPE).
+precision (HDI width ≤ Goal) and conclusiveness (HDI vs ROPE).
 
 ---
 

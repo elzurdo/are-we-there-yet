@@ -2,7 +2,7 @@
 Decision logic for the Enhanced Precision is the Goal (ePitG) stopping algorithm.
 
 The ePitG algorithm requires BOTH conditions to stop:
-1. Precision:  HDI width < Goal
+1. Precision:  HDI width ≤ Goal
 2. Location:   HDI fully inside or fully outside the ROPE (conclusive)
 
 Decision outcomes (after stopping):
@@ -129,7 +129,7 @@ def epitg_decision(
     """
     hdi_width = hdi_max - hdi_min
     rope_width = rope_max - rope_min
-    precision_met = hdi_width < precision_goal
+    precision_met = hdi_width <= precision_goal
 
     if precision_met:
         decision = _decide_location(hdi_min, hdi_max, rope_min, rope_max)

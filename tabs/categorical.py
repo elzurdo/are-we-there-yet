@@ -128,7 +128,7 @@ def sidebar_inputs() -> dict:
         "Goal (target HDI width)",
         min_value=0.001, max_value=2.0,
         value=0.08, step=0.01, format="%.3f", key="cat_precision_goal",
-        help="Must be narrower than the ROPE width for the method to work.",
+        help="Must not exceed the ROPE width for the method to work.",
     )
 
     ci_fraction = CI_FRACTION
@@ -196,8 +196,8 @@ def render_results(inputs: dict):
     if rope_min >= rope_max:
         st.warning("ROPE min must be less than ROPE max.")
         return
-    if precision_goal >= rope_width:
-        st.warning("Precision goal must be narrower than the ROPE width.")
+    if precision_goal > rope_width:
+        st.warning("Precision goal must not exceed the ROPE width.")
         return
 
     # --- Compute total and proportions ---

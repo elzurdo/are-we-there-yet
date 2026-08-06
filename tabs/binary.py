@@ -249,8 +249,8 @@ def _render_single_group(inputs: dict):
     if rope_min < 0 or rope_max > 1:
         st.warning("ROPE bounds must be within [0, 1] for binary data.")
         return
-    if precision_goal >= rope_width:
-        st.warning(f"Precision goal {GOAL_STR} must be narrower than the ROPE width.")
+    if precision_goal > rope_width:
+        st.warning(f"Precision goal {GOAL_STR} must not exceed the ROPE width.")
         return
 
     observed_rate = successes / total if total > 0 else 0.0
@@ -571,7 +571,7 @@ def _sidebar_between_groups() -> dict:
         "Goal (target HDI width)",
         min_value=0.001, max_value=2.0,
         step=0.01, format="%.3f", key="bg_precision_goal",
-        help="Must be narrower than the ROPE width for the method to work.",
+        help="Must not exceed the ROPE width for the method to work.",
     )
 
     ci_fraction = CI_FRACTION
@@ -640,8 +640,8 @@ def _render_between_groups(inputs: dict):
     if rope_min >= rope_max:
         st.warning("ROPE min must be less than ROPE max.")
         return
-    if precision_goal >= rope_width:
-        st.warning("Precision goal must be narrower than the ROPE width.")
+    if precision_goal > rope_width:
+        st.warning("Precision goal must not exceed the ROPE width.")
         return
 
     p_a = s_a / n_a if n_a > 0 else 0.0

@@ -131,10 +131,10 @@ class TestDecisionResultFields:
         result = _make_result(hdi_min=0.43, hdi_max=0.57)  # width=0.14 > 0.08
         assert result.precision_met is False
 
-    def test_precision_met_false_when_width_equals_goal(self):
-        """Precision requires strictly less than goal (not <=)."""
-        result = _make_result(hdi_min=0.46, hdi_max=0.54)  # width == 0.08
-        assert result.precision_met is False
+    def test_precision_met_true_when_width_equals_goal(self):
+        """Precision is met when HDI width equals the goal (≤)."""
+        result = _make_result(hdi_min=0.0, hdi_max=0.08)  # width exactly == 0.08
+        assert result.precision_met is True
 
     def test_can_stop_true_for_accept(self):
         result = _make_result(hdi_min=0.47, hdi_max=0.53)
