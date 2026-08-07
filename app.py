@@ -21,6 +21,9 @@ st.set_page_config(
 
 from tabs import binary, continuous, categorical
 from utils.tutorials import GLOSSARY_TABLE
+from utils.constants import (
+    PREPRINT_URL, PREPRINT_CITE_INLINE, PREPRINT_APA, PREPRINT_BIBTEX, PREPRINT_ARXIV_ID,
+)
 
 
 # Putting here because for some reason
@@ -133,17 +136,37 @@ except Exception:
 
 _compact = f"📦 Built with: streamlit {_versions.get('streamlit','unknown')} | scipy {_versions.get('scipy','unknown')} | numpy {_versions.get('numpy','unknown')} | matplotlib {_versions.get('matplotlib','unknown')}"
 st.sidebar.caption(_compact)
+st.sidebar.caption(f"📄 [{PREPRINT_CITE_INLINE}]({PREPRINT_URL})")
 # ── Main area ────────────────────────────────────────────────────────
 st.title("Are We There Yet? 🚗")
 st.caption(caption_str)
 
+# TODO: rename all ePitG → DPitG throughout the codebase (separate task)
 with st.expander("ℹ️ About"):
     st.markdown(
         "This calculator helps you decide when to stop your experiment using the **DPitG** "
         "(Decisive Precision is the Goal) sequential testing algorithm. "
         "Enter your summary statistics, define the expected effect size (via the ROPE: Region of Practical Equivalence) and Precision Goal, "
-        "and get a empirical stopping verdict."
+        "and get an empirical stopping verdict."
     )
+
+    st.divider()
+
+    # ── Citation: Option A — inline hyperlinked text ──────────────────────────
+    # st.markdown(
+    #     f"For full details on DPitG see: [{PREPRINT_CITE_INLINE}]({PREPRINT_URL})"
+    # )
+
+    # ── Citation: Option B — arXiv shield badge ───────────────────────────────
+    st.markdown(
+        f"For full details on DPitG see: [![arXiv](https://img.shields.io/badge/arXiv-{PREPRINT_ARXIV_ID}-b31b1b.svg)]({PREPRINT_URL})",
+        unsafe_allow_html=False,
+    )
+
+    # ── Citation: Option C — APA + BibTeX block ───────────────────────────────
+    st.markdown("Citations (APA & BibTeX):")
+    st.markdown(PREPRINT_APA)
+    st.code(PREPRINT_BIBTEX, language="bibtex")
 
 _committed_inputs = st.session_state.get("committed_inputs")
 _committed_key = st.session_state.get("committed_key")
