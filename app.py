@@ -180,8 +180,8 @@ if _committed_inputs is not None and _committed_key == _current_commit_key:
         categorical.render_results(_committed_inputs)
 else:
     st.info(
-        "👈 Fill in your data in the sidebar, then click **🔍 Analyze** — "
-        "or try **📋 Example** to load sample data instantly."
+        "👈 Fill in your data in the sidebar, then click **🔍 Analyze**.\n\n"
+        "Or try **📋 Example** to load sample data instantly."
     )
     
     _is_binary_single = (

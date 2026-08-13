@@ -51,12 +51,42 @@ _FRACTION_MODE = f"As a fraction of {ROPE_WIDTH_STR} (width of my null equivalen
 _ABSOLUTE_MODE = "As an absolute width"
 
 
+def _on_apply_click() -> None:
+    """on_click callback for the Apply button.
+
+    on_click callbacks are committed to global session state before Streamlit
+    triggers the next rerun, so this survives both fragment and app reruns.
+    We read the dialog widget values from session state (they share the same
+    session state object) and store the result under a non-widget key that
+    the sidebar will consume before rendering its ROPE/precision widgets.
+    """
+    min_diff_pct = st.session_state.get("_advisor_min_diff_pct")
+    if min_diff_pct is None:
+        return
+    rope_width_val = 2 * min_diff_pct / 100.0
+    precision_mode = st.session_state.get("_advisor_precision_mode", _FRACTION_MODE)
+    if precision_mode == _FRACTION_MODE:
+        precision_pct = st.session_state.get("_advisor_precision_pct", 80)
+        precision_goal_val = rope_width_val * precision_pct / 100.0
+    else:
+        precision_abs_pct = st.session_state.get("_advisor_precision_abs_pct")
+        if precision_abs_pct is None:
+            return
+        precision_goal_val = precision_abs_pct / 100.0
+    st.session_state["_rope_advisor_result"] = {
+        "binary_rope_mode": "Full width (symmetric)",
+        "binary_rope_width": round(rope_width_val, 6),
+        "binary_precision_goal": round(precision_goal_val, 6),
+    }
+
+
 @st.dialog("🧭 Help me choose ROPE & Precision Goal", width="large")
 def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
     """Interactive 3-step guide for binary single-group ROPE & precision goal.
 
-    On Apply, stages computed values into st.session_state['_pending_example']
-    and calls st.rerun() so the flush block in app.py injects them safely.
+    On Apply, _on_apply_click() commits the result to session state, then this
+    dialog detects the committed key and calls st.rerun(scope="app") to close
+    itself and let the sidebar flush the values before its widgets render.
 
     Parameters
     ----------
@@ -64,6 +94,10 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         The current null hypothesis value — used to compute ROPE bounds
         for the live preview.
     """
+    # If on_click already committed a result, close the dialog immediately so
+    # the full-app rerun lets the sidebar read it before widgets are rendered.
+    if "_rope_advisor_result" in st.session_state:
+        st.rerun(scope="app")
 
     # ── Optional domain preset ────────────────────────────────────────────────
     preset_name = st.selectbox(
@@ -217,15 +251,9 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         st.info("Complete Steps 1–3 above to see a preview.")
 
     # ── Apply ─────────────────────────────────────────────────────────────────
-    if st.button(
+    st.button(
         "✅ Apply",
         type="primary",
         disabled=not all_ready or goal_too_wide,
-    ):
-        st.session_state["_pending_example"] = {
-            "binary_rope_mode": "Full width (symmetric)",
-            "binary_rope_width": round(rope_width, 6),
-            "binary_precision_goal": round(precision_goal, 6),
-        }
-        st.session_state["_force_commit"] = True
-        st.rerun()
+        on_click=_on_apply_click,
+    )

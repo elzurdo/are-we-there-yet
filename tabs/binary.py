@@ -120,6 +120,15 @@ def _sidebar_single_group() -> dict:
         )
         total = (successes + failures) if (successes is not None and failures is not None) else None
 
+    # Flush values committed by the ROPE advisor dialog's on_click callback
+    # before ROPE / precision widgets render so they pick up the new values.
+    if "_rope_advisor_result" in st.session_state:
+        _r = st.session_state.pop("_rope_advisor_result")
+        st.session_state["binary_rope_mode"] = _r["binary_rope_mode"]
+        st.session_state["binary_rope_width"] = _r["binary_rope_width"]
+        st.session_state["binary_precision_goal"] = _r["binary_precision_goal"]
+        st.session_state["_force_commit"] = True
+
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
 
     if "binary_theta_null" not in st.session_state:
@@ -170,6 +179,10 @@ def _sidebar_single_group() -> dict:
         use_container_width=True,
     ):
         rope_advisor_dialog_binary_single(theta_null=theta_null)
+
+    # TODO: more to just above the Analyze button
+    if rope_width is None or precision_goal is None:
+        st.sidebar.caption("⚠️ Set ROPE width and Precision Goal above to enable analysis.")
 
     ci_fraction = CI_FRACTION
     decimal_places = 3
@@ -242,6 +255,8 @@ def _render_single_group(inputs: dict):
     # --- Validation ---
     if total < 2:
         st.warning("Need at least 2 observations.")
+        return
+    if rope_min is None or rope_max is None or rope_width is None or precision_goal is None:
         return
     if rope_min >= rope_max:
         st.warning("ROPE min must be less than ROPE max.")
