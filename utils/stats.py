@@ -322,6 +322,11 @@ def estimate_n_goal(
     Setting width = precision_goal and solving for N:
         N_goal ≈ 4 · z*² · V / precision_goal²
 
+    Note: for binary single-group, prefer ``binomial_rate_ci_width_to_sample_size``
+    which accounts for the Beta-posterior variance V = θ(1−θ)/(N+1) and therefore
+    subtracts 1 from the result.  This function uses the generic CLT form without
+    that correction and rounds up via ``math.ceil``.  The two converge for large N.
+
     This is generic: caller supplies the per-observation variance V for their context:
       - Binary single group:     V = θ̂(1 − θ̂)
       - Binary between groups:   V = p̂_A(1−p̂_A)/n_A + p̂_B(1−p̂_B)/n_B  (total SE²)
@@ -497,7 +502,7 @@ def binomial_rate_ci_width_to_sample_size(p, credible_interval_width, z_star=1.9
         Approximate sample size.
     """
     variance_ = (0.5 * credible_interval_width / z_star) ** 2
-    n_ = p * (1 - p) / variance_ - 1
+    n_ = p * (1 - p) / variance_ - 1  # as per the variance of the Beta Distribution, which is p*(1-p)/(n+1), where p=successes/(successes+failures)
     return n_
 
 

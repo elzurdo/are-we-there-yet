@@ -112,6 +112,29 @@ would be valuable, but first verify the algorithm behaves well when θ_null is n
 Preset narratives currently hard-code example rates (e.g. "around 3%"). Make them
 dynamic so they update if the user overrides the preset values in Steps 1–3.
 
+### 6e. ✅ Show estimated sample size in the advisor preview
+**Done.** Added an "Estimated Sample Size" section above the Apply button in
+`utils/rope_advisor.py`. Features: θ and ω_goal sliders (live N_goal metric +
+`plot_n_goal_by_parameter` with highlighted curve and dot), advanced expander
+for z*, background ω range. Plot refactored in `utils/viz.py` to show
+transparent background curves with the user's curve prominent.
+
+**Follow-up:** The explorer's ω_goal and θ slider values should also be
+propagated to the main page on Apply (currently only ROPE width from Step 1
+and precision goal from Step 3 are propagated).
+
+### 6f. Simplify Step 2 — default to fraction mode
+Most users (especially first-timers) are fine with fraction mode. Consider tucking
+the absolute-width option behind an "Advanced" toggle to reduce cognitive load.
+
+### 6g. Add orientation landmarks to the precision slider (Step 3)
+Caption like "70–80% is typical; above 90% requires substantially more data" to help
+users calibrate without trial and error.
+
+### 6h. "What happens next" note near Apply
+Brief guidance after clicking Apply, e.g. "These values will fill in the sidebar —
+then enter your observed data to get a verdict." Prevents the "now what?" moment.
+
 ---
 
 ## 7. (Optional) Build a skill for the app

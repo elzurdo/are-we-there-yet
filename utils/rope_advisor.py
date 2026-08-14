@@ -17,9 +17,10 @@ from utils.constants import (
     GOAL_STR,
     HDI_WIDTH_STR,
     ROPE_WIDTH_STR,
-    BINARY_SINGLE_NULL_STR,
     BINARY_SINGLE_OBSERVE_STR,
 )
+from utils.stats import binomial_rate_ci_width_to_sample_size
+from utils.viz import plot_n_goal_by_parameter
 
 # ── Domain presets ────────────────────────────────────────────────────────────
 # Each entry maps to a dict with:
@@ -199,6 +200,8 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
     st.divider()
 
     # ── Step 2 — Precision goal framing ──────────────────────────────────────
+    # TODO: consider defaulting to fraction mode and tucking absolute mode
+    #   behind an "Advanced" toggle to reduce cognitive load for new users.
     st.markdown("#### Step 2 — How do you want to express outcome precision?")
     st.caption("How precise do you need your answer to be? More precision means collecting more data.")
     with st.expander("ℹ️ Learn more"):
@@ -238,6 +241,8 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
     st.divider()
 
     # ── Step 3 — Precision level ──────────────────────────────────────────────
+    # TODO: add a caption with orientation, e.g. "70–80% is typical;
+    #   above 90% requires substantially more data."
     st.markdown("#### Step 3 — How precise?")
 
     precision_goal = None
@@ -247,7 +252,7 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         precision_pct = st.slider(
             f"{GOAL_STR} as % of {ROPE_WIDTH_STR}",
             min_value=50,
-            max_value=99,
+            max_value=100,
             value=default_pct,
             step=1,
             format="%d%%",
@@ -299,7 +304,98 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
     else:
         st.info("Complete Steps 1–3 above to see a preview.")
 
+    # ── Estimated sample size ────────────────────────────────────────────────
+    if all_ready and not goal_too_wide:
+        st.divider()
+        st.markdown("#### Estimated Sample Size")
+        st.caption(
+            "How many observations would you need to reach this precision? "
+            "Adjust θ and ω below to explore."
+        )
+
+        col_theta, col_omega = st.columns(2)
+        with col_theta:
+            explore_theta = st.slider(
+                "θ (expected rate)",
+                min_value=0.01,
+                max_value=0.99,
+                value=float(theta_null),
+                step=0.01,
+                format="%.2f",
+                key="_advisor_explore_theta",
+            )
+        with col_omega:
+            w_goal_min = 0.5 * float(rope_width)
+            w_goal_max = float(rope_width)
+            explore_omega = st.slider(
+                f"ω_goal (precision)",
+                min_value=w_goal_min,
+                max_value=w_goal_max,
+                value=float(precision_goal),
+                step=0.001,
+                format="%.4f",
+                key="_advisor_explore_omega",
+            )
+
+        n_goal_est = binomial_rate_ci_width_to_sample_size(
+            explore_theta, explore_omega, z_star=1.96,
+        )
+        n_goal_display = max(1, int(n_goal_est))
+
+        st.metric(label="N_goal (estimated minimum sample size)", value=f"{n_goal_display:,}")
+
+        # TODO: update z_star to derive from a user-chosen confidence level
+        with st.expander("⚙️ Advanced"):
+            adv_z = st.number_input(
+                "z* (critical value)",
+                min_value=1.0,
+                max_value=4.0,
+                value=1.96,
+                step=0.01,
+                format="%.2f",
+                key="_advisor_z_star",
+                help="1.96 ≈ 95% HDI, 2.576 ≈ 99% HDI",
+            )
+            adv_col1, adv_col2 = st.columns(2)
+            with adv_col1:
+                adv_w_min = st.number_input(
+                    "Background ω min",
+                    min_value=0.5 * w_goal_min,
+                    max_value=w_goal_max,
+                    value=w_goal_min,
+                    step=0.01,
+                    format="%.2f",
+                    key="_advisor_w_min",
+                )
+            with adv_col2:
+                adv_w_max = st.number_input(
+                    "Background ω max",
+                    min_value=w_goal_min,
+                    max_value=2 *w_goal_max,
+                    value=w_goal_max,
+                    step=0.01,
+                    format="%.2f",
+                    key="_advisor_w_max",
+                )
+
+            n_goal_est_adv = binomial_rate_ci_width_to_sample_size(
+                explore_theta, explore_omega, z_star=adv_z,
+            )
+            n_goal_display = max(1, int(n_goal_est_adv))
+            st.metric(label="N_goal (with custom z*)", value=f"{n_goal_display:,}")
+
+        fig = plot_n_goal_by_parameter(
+            omega_goal=explore_omega,
+            theta_highlight=explore_theta,
+            z_star=st.session_state.get("_advisor_z_star", 1.96),
+            w_goal_min=st.session_state.get("_advisor_w_min", w_goal_min),
+            w_goal_max=st.session_state.get("_advisor_w_max", w_goal_max),
+        )
+        st.pyplot(fig)
+
     # ── Apply ─────────────────────────────────────────────────────────────────
+    # TODO: add a brief "what happens next" note, e.g.
+    #   "These values will fill in the sidebar — then enter your observed data to get a verdict."
     st.button(
         "✅ Apply",
         type="primary",

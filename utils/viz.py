@@ -2,11 +2,11 @@
 Visualization utilities for posterior distributions with HDI and ROPE.
 """
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import numpy as np
 from scipy.stats import beta, t as student_t
 
 from utils.decision import DecisionResult, DECISION_DISPLAY
+from utils.stats import binomial_rate_ci_width_to_sample_size
 
 
 def plot_posterior_binary(result: DecisionResult, successes: float, failures: float,
@@ -666,5 +666,59 @@ def plot_categorical_forest(
     # Legend
     ax.legend(loc='upper right', fontsize=9, framealpha=0.9)
     
+    fig.tight_layout()
+    return fig
+
+
+def plot_n_goal_by_parameter(
+    omega_goal=None,
+    theta_highlight=None,
+    z_star=1.96,
+    w_goal_min=0.04,
+    w_goal_max=0.10,
+    n_background_curves=7,
+):
+    thetas = np.arange(0.01, 0.99, 0.01)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    bg_goals = np.linspace(w_goal_min, w_goal_max, n_background_curves)
+    for goal in bg_goals:
+        n_vals = [binomial_rate_ci_width_to_sample_size(theta, goal, z_star=z_star)
+                  for theta in thetas]
+        ax.plot(thetas, n_vals, color="gray", alpha=0.15, linewidth=1)
+
+    if w_goal_min < w_goal_max:
+        n_top = [binomial_rate_ci_width_to_sample_size(theta, w_goal_min, z_star=z_star)
+                 for theta in thetas]
+        n_bot = [binomial_rate_ci_width_to_sample_size(theta, w_goal_max, z_star=z_star)
+                 for theta in thetas]
+        ax.fill_between(thetas, n_bot, n_top, alpha=0.06, color="gray")
+        ax.text(0.05, max(n_top) * 0.92, f"ω = {w_goal_min}–{w_goal_max}",
+                fontsize=8, color="gray", alpha=0.6)
+
+    if omega_goal is not None:
+        n_user = [binomial_rate_ci_width_to_sample_size(theta, omega_goal, z_star=z_star)
+                  for theta in thetas]
+        ax.plot(thetas, n_user, color="steelblue", linewidth=2.5,
+                label=f"ω_goal = {omega_goal:.4f}", zorder=3)
+
+        if theta_highlight is not None:
+            n_at_theta = binomial_rate_ci_width_to_sample_size(
+                theta_highlight, omega_goal, z_star=z_star
+            )
+            ax.plot(theta_highlight, n_at_theta, "o", color="darkred",
+                    markersize=10, zorder=5,
+                    label=f"N_goal ≈ {max(1, int(n_at_theta)):,} at θ = {theta_highlight:.2f}")
+
+    ax.legend(fontsize=9)
+    ax.grid(alpha=0.3)
+    ax.set_xlabel(r"$\theta$", fontsize=12)
+    ax.set_ylabel(r"$N_{\rm goal}(\theta,\, \omega_{\rm goal})$", fontsize=12)
+    ax.set_title(
+        r"Minimum $N_{\rm goal}$ to Achieve Precision Goal",
+        fontsize=14,
+    )
+    ax.set_yticks([])
     fig.tight_layout()
     return fig
