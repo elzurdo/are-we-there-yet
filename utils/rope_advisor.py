@@ -160,13 +160,16 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
 
     # ── Step 1 — Minimum meaningful difference ────────────────────────────────
     st.markdown(f"#### Step 1 — Smallest effect that matters ({BINARY_SINGLE_MIN_EFFECT_STR})")
-    st.markdown(
-        f"What's the smallest change in proportion your team would actually act on?  \n"
-        f"*e.g. If your baseline is {BINARY_SINGLE_NULL_STR} = 0.50 and a shift to {BINARY_SINGLE_OBSERVE_STR} =0.52 would change a decision, enter **2** (percentage points) "
-        f"({BINARY_SINGLE_MIN_EFFECT_STR} = 0.02 — the minimum meaningful shift around each side of the null).*  \n"
-        f"The ROPE — **Region of Practical Equivalence** — spans ±{BINARY_SINGLE_MIN_EFFECT_STR} around "
-        f"{BINARY_SINGLE_NULL_STR}, giving {ROPE_WIDTH_STR} = 2{BINARY_SINGLE_MIN_EFFECT_STR}."
-    )
+    st.caption("What's the smallest change in proportion your team would actually act on?")
+    with st.expander("ℹ️ Learn more"):
+        st.markdown(
+            f"If your baseline is {BINARY_SINGLE_NULL_STR} = 0.50 and a shift to "
+            f"{BINARY_SINGLE_OBSERVE_STR} = 0.52 would change a decision, enter **2** "
+            f"(percentage points), meaning {BINARY_SINGLE_MIN_EFFECT_STR} = 0.02.  \n"
+            f"The **ROPE** (Region of Practical Equivalence) spans "
+            f"±{BINARY_SINGLE_MIN_EFFECT_STR} around {BINARY_SINGLE_NULL_STR}, "
+            f"giving {ROPE_WIDTH_STR} = 2{BINARY_SINGLE_MIN_EFFECT_STR}."
+        )
 
     default_diff = float(preset["min_meaningful_diff_pct"]) if preset else None
     min_diff_pct = st.number_input(
@@ -197,12 +200,14 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
 
     # ── Step 2 — Precision goal framing ──────────────────────────────────────
     st.markdown("#### Step 2 — How do you want to express outcome precision?")
-    st.markdown(
-        f"Think of *precision* as the width of the bell curve (the posterior) that you'd be happy to stop the experiment under.  \n"
-        f"A narrower curve means you're more confident about where the true effect lies but at a cost of more data collection.  \n"
-        f"This is called the **Precision Goal** ({GOAL_STR}): the target for {HDI_WIDTH_STR} at stopping.  \n"
-        f"It is independent of the ROPE location but dependent on width {GOAL_STR}≤{ROPE_WIDTH_STR}."
-    )
+    st.caption("How precise do you need your answer to be? More precision means collecting more data.")
+    with st.expander("ℹ️ Learn more"):
+        st.markdown(
+            f"*Precision* is the width of your uncertainty about the true value — "
+            f"narrower means more confidence, but requires more data.  \n"
+            f"The **Precision Goal** ({GOAL_STR}) is the target width at stopping. "
+            f"It must satisfy {GOAL_STR} ≤ {ROPE_WIDTH_STR}."
+        )
 
     # Build captions with live numbers where possible
     _eg_rope = rope_width if rope_width is not None else 0.04
