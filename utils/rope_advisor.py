@@ -26,22 +26,51 @@ from utils.constants import (
 #   min_meaningful_diff_pct  – smallest effect that matters, in pp
 #   precision_mode           – "As a fraction of my negligible zone" | "As an absolute width"
 #   precision_pct            – used when mode is fraction (0–100)
+#   narrative               – plain-language explanation shown in the UI
+# TODO: narratives currently hard-code example rates (e.g. "around 3%").
+#   Make them dynamic so they update if the user changes the preset values.
 DOMAIN_PRESETS = {
-    "Custom (I'll set my own)": None,
-    "E-commerce / conversion rate": {
+    "🔧 Custom (I'll set my own)": None,
+    "🛒 E-commerce / conversion rate": {
+        "min_meaningful_diff_pct": 0.5,
+        "precision_mode": "As a fraction of my negligible zone",
+        "precision_pct": 70,
+        "narrative": (
+            "Your checkout conversion is around 3%. "
+            "A half-point shift (e.g. 3.0% → 3.5%) is worth acting on. "
+            "You want answers fast — being wrong occasionally just means running another test."
+        ),
+    },
+    "🏥 Medical / clinical rate": {
         "min_meaningful_diff_pct": 2.0,
         "precision_mode": "As a fraction of my negligible zone",
-        "precision_pct": 80,
-    },
-    "Medical / clinical rate": {
-        "min_meaningful_diff_pct": 5.0,
-        "precision_mode": "As a fraction of my negligible zone",
         "precision_pct": 90,
+        "narrative": (
+            "You're tracking a treatment response rate around 70%. "
+            "A 2 percentage-point shift would change clinical practice. "
+            "You need tight precision — wrong calls here affect patients."
+        ),
     },
-    "Internal tooling / ops": {
+    "💻 Internal tooling / ops": {
         "min_meaningful_diff_pct": 3.0,
         "precision_mode": "As a fraction of my negligible zone",
-        "precision_pct": 75,
+        "precision_pct": 80,
+        "narrative": (
+            "Your pipeline success rate is around 95%. "
+            "Swings under 3 percentage points are normal noise. "
+            "Data is cheap (every job run is a data point), so you'd rather collect more and be sure."
+        ),
+    },
+    "🗳️ Election polling": {
+        "min_meaningful_diff_pct": 1.0,
+        "precision_mode": "As a fraction of my negligible zone",
+        "precision_pct": 90,
+        "narrative": (
+            "You're polling whether a candidate crosses the 50% threshold. "
+            "A 1 percentage-point shift in true support is meaningful in a tight race. "
+            "Polling data is expensive (each response costs real fieldwork), "
+            "but getting the call wrong is worse — you need high precision."
+        ),
     },
 }
 
@@ -111,6 +140,21 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         key="_advisor_preset",
     )
     preset = DOMAIN_PRESETS[preset_name]
+
+    if preset is not None and "narrative" in preset:
+        st.info(preset["narrative"])
+
+    prev_preset = st.session_state.get("_advisor_prev_preset")
+    if preset_name != prev_preset:
+        st.session_state["_advisor_prev_preset"] = preset_name
+        if preset is not None:
+            st.session_state["_advisor_min_diff_pct"] = float(preset["min_meaningful_diff_pct"])
+            if preset.get("precision_mode") == "As an absolute width":
+                st.session_state["_advisor_precision_mode"] = _ABSOLUTE_MODE
+            else:
+                st.session_state["_advisor_precision_mode"] = _FRACTION_MODE
+            if "precision_pct" in preset:
+                st.session_state["_advisor_precision_pct"] = int(preset["precision_pct"])
 
     st.divider()
 

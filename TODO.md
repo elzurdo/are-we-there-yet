@@ -84,40 +84,33 @@ single-group Bernoulli setting.
 
 ---
 
-## 6. Fix the ROPE Advisor dialog → sidebar population (in progress, blocked)
+## 6. ROPE Advisor dialog — resolved + follow-ups
 
-**Scope:** Binary single-group only first; once solved, apply the same fix to the other
-three cases (binary between-groups, continuous single-group, continuous between-groups).
+**Status: ✅ Resolved** — the `@st.dialog` → `_rope_advisor_result` → flush pattern
+works correctly for binary single-group. Preset switching also fixed (session-state
+writes before widget instantiation).
 
-**Problem:** Opening the 🧭 dialog (`rope_advisor_dialog_binary_single`), filling in
-Custom values (Steps 1–3), clicking ✅ Apply, and closing the dialog leaves the
-sidebar ROPE width and Precision Goal boxes **empty** — the values never reach the widgets.
+**Follow-ups:**
 
-**Root cause hypothesis:** `@st.dialog` in Streamlit 1.54 is implemented as a fragment.
-Session-state writes made *during* the fragment render are not reliably committed to
-global session state across reruns — particularly when `st.rerun()` / `st.rerun(scope="app")`
-is called, which interrupts the fragment execution (via exception) before any buffered
-writes can be flushed.
+### 6a. Apply the same advisor pattern to the other three cases
+- Binary between-groups
+- Continuous single-group
+- Continuous between-groups
 
-**Attempts made (all failed to populate the sidebar boxes):**
+### 6b. Domain presets — future additions
+Consider adding presets for:
+- **Manufacturing / defect rate** — binary single-group (defective or not)
+- **Customer churn** — binary single-group (churned or not)
 
-| Attempt | What was tried | Outcome |
-|---------|---------------|---------|
-| A | `_pending_example` staging + `st.rerun()` (original code) | Sidebar stays empty |
-| B | Direct widget-key writes + `st.rerun(scope="app")` | Sidebar stays empty |
-| C | `on_click` callback writes `_rope_advisor_result` (non-widget key); dialog detects it on fragment rerun and calls `st.rerun(scope="app")`; sidebar flushes before ROPE widgets render | Sidebar stays empty |
+### 6c. Medical preset — edge-case example near 0%
+The current medical preset uses a ~70% treatment response rate. A complementary
+example with a low-rate scenario (e.g. 2–3% surgical complication or infection rate)
+would be valuable, but first verify the algorithm behaves well when θ_null is near
+0% or 100% (the Beta posterior becomes highly skewed).
 
-**What does work:**  The 📋 Example button (runs in main-app context, not a fragment)
-uses the same `_pending_example` + flush pattern and correctly populates the sidebar.
-
-**Next ideas to try:**
-
-- Confirm empirically whether `_rope_advisor_result` even survives the rerun
-  (add a temporary `st.write(st.session_state)` debug line in `_sidebar_single_group`).
-- Try replacing `@st.dialog` with an inline sidebar expander so there is no fragment
-  boundary — values would be set in the main-app context with no rerun needed.
-- Try `st.fragment(run_every=None)` alternatives or check Streamlit 1.54 release notes
-  for known dialog/session-state interaction bugs.
+### 6d. Dynamic preset narratives
+Preset narratives currently hard-code example rates (e.g. "around 3%"). Make them
+dynamic so they update if the user overrides the preset values in Steps 1–3.
 
 ---
 
