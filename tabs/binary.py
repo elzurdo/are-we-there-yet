@@ -127,6 +127,8 @@ def _sidebar_single_group() -> dict:
         st.session_state["binary_rope_mode"] = _r["binary_rope_mode"]
         st.session_state["binary_rope_width"] = _r["binary_rope_width"]
         st.session_state["binary_precision_goal"] = _r["binary_precision_goal"]
+        if "binary_theta_null" in _r:
+            st.session_state["binary_theta_null"] = _r["binary_theta_null"]
         st.session_state["_force_commit"] = True
 
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")

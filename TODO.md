@@ -113,23 +113,26 @@ Preset narratives currently hard-code example rates (e.g. "around 3%"). Make the
 dynamic so they update if the user overrides the preset values in Steps 1–3.
 
 ### 6e. ✅ Show estimated sample size in the advisor preview
-**Done.** Added an "Estimated Sample Size" section above the Apply button in
-`utils/rope_advisor.py`. Features: θ and ω_goal sliders (live N_goal metric +
-`plot_n_goal_by_parameter` with highlighted curve and dot), advanced expander
-for z*, background ω range. Plot refactored in `utils/viz.py` to show
-transparent background curves with the user's curve prominent.
+**Done.** Added as Step 3 in the advisor dialog. Features: θ and ω_goal sliders
+(live N_goal metric + `plot_n_goal_by_parameter` with highlighted curve and dot),
+advanced expander for z* and background ω range. Plot refactored in `utils/viz.py`
+to show transparent background curves with the user's curve prominent.
 
-**Follow-up:** The explorer's ω_goal and θ slider values should also be
-propagated to the main page on Apply (currently only ROPE width from Step 1
-and precision goal from Step 3 are propagated).
+### 6f. ✅ Simplify Step 2 — default to fraction mode
+**Done.** Removed the fraction-vs-absolute radio from Step 2; now shows only the
+fraction slider. Absolute-width mode noted as a TODO in the Step 3 Advanced
+expander for future re-addition.
 
-### 6f. Simplify Step 2 — default to fraction mode
-Most users (especially first-timers) are fine with fraction mode. Consider tucking
-the absolute-width option behind an "Advanced" toggle to reduce cognitive load.
+### 6g. ✅ Add orientation landmarks to the precision slider (Step 2)
+**Done.** Added as help text on the slider: "70–80% is typical; above 90%
+requires substantially more data."
 
-### 6g. Add orientation landmarks to the precision slider (Step 3)
-Caption like "70–80% is typical; above 90% requires substantially more data" to help
-users calibrate without trial and error.
+### 6i. ✅ Propagate explorer values on Apply
+**Done.** Step 3's ω_goal and θ slider values are propagated to the main page
+on Apply. `_on_apply_click` reads explorer state; `tabs/binary.py` flush block
+writes `binary_theta_null`. Step 2 shows an override caption when Step 3's
+ω_goal differs. Step 3 shows a second preview box once any slider is touched,
+reporting whether θ_null and ω_goal were updated or remain the same.
 
 ### 6h. "What happens next" note near Apply
 Brief guidance after clicking Apply, e.g. "These values will fill in the sidebar —

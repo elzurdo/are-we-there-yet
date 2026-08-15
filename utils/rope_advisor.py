@@ -25,8 +25,7 @@ from utils.viz import plot_n_goal_by_parameter
 # ── Domain presets ────────────────────────────────────────────────────────────
 # Each entry maps to a dict with:
 #   min_meaningful_diff_pct  – smallest effect that matters, in pp
-#   precision_mode           – "As a fraction of my negligible zone" | "As an absolute width"
-#   precision_pct            – used when mode is fraction (0–100)
+#   precision_pct            – fraction of ROPE width (0–100)
 #   narrative               – plain-language explanation shown in the UI
 # TODO: narratives currently hard-code example rates (e.g. "around 3%").
 #   Make them dynamic so they update if the user changes the preset values.
@@ -34,7 +33,6 @@ DOMAIN_PRESETS = {
     "🔧 Custom (I'll set my own)": None,
     "🛒 E-commerce / conversion rate": {
         "min_meaningful_diff_pct": 0.5,
-        "precision_mode": "As a fraction of my negligible zone",
         "precision_pct": 70,
         "narrative": (
             "Your checkout conversion is around 3%. "
@@ -44,7 +42,6 @@ DOMAIN_PRESETS = {
     },
     "🏥 Medical / clinical rate": {
         "min_meaningful_diff_pct": 2.0,
-        "precision_mode": "As a fraction of my negligible zone",
         "precision_pct": 90,
         "narrative": (
             "You're tracking a treatment response rate around 70%. "
@@ -54,7 +51,6 @@ DOMAIN_PRESETS = {
     },
     "💻 Internal tooling / ops": {
         "min_meaningful_diff_pct": 3.0,
-        "precision_mode": "As a fraction of my negligible zone",
         "precision_pct": 80,
         "narrative": (
             "Your pipeline success rate is around 95%. "
@@ -64,7 +60,6 @@ DOMAIN_PRESETS = {
     },
     "🗳️ Election polling": {
         "min_meaningful_diff_pct": 1.0,
-        "precision_mode": "As a fraction of my negligible zone",
         "precision_pct": 90,
         "narrative": (
             "You're polling whether a candidate crosses the 50% threshold. "
@@ -74,11 +69,6 @@ DOMAIN_PRESETS = {
         ),
     },
 }
-
-# Radio option strings — defined as module-level constants so the comparison
-# in Step 3 stays in sync with the widget options list.
-_FRACTION_MODE = f"As a fraction of {ROPE_WIDTH_STR} (width of my null equivalence zone)"
-_ABSOLUTE_MODE = "As an absolute width"
 
 
 def _on_apply_click() -> None:
@@ -94,20 +84,36 @@ def _on_apply_click() -> None:
     if min_diff_pct is None:
         return
     rope_width_val = 2 * min_diff_pct / 100.0
-    precision_mode = st.session_state.get("_advisor_precision_mode", _FRACTION_MODE)
-    if precision_mode == _FRACTION_MODE:
-        precision_pct = st.session_state.get("_advisor_precision_pct", 80)
-        precision_goal_val = rope_width_val * precision_pct / 100.0
-    else:
-        precision_abs_pct = st.session_state.get("_advisor_precision_abs_pct")
-        if precision_abs_pct is None:
-            return
-        precision_goal_val = precision_abs_pct / 100.0
-    st.session_state["_rope_advisor_result"] = {
+
+    # Step 3 explorer values override Step 2 defaults when present.
+    precision_pct = st.session_state.get("_advisor_precision_pct", 80)
+    precision_goal_val = rope_width_val * precision_pct / 100.0
+    explore_omega = st.session_state.get("_advisor_explore_omega")
+    if explore_omega is not None:
+        precision_goal_val = explore_omega
+
+    explore_theta = st.session_state.get("_advisor_explore_theta")
+
+    result = {
         "binary_rope_mode": "Full width (symmetric)",
         "binary_rope_width": round(rope_width_val, 6),
         "binary_precision_goal": round(precision_goal_val, 6),
     }
+    if explore_theta is not None:
+        result["binary_theta_null"] = round(explore_theta, 4)
+
+    st.session_state["_rope_advisor_result"] = result
+
+
+def _preview_box(theta_null, rope_width, min_diff_pct, precision_goal):
+    """Render the green success preview showing ROPE bounds and precision goal."""
+    st.success(
+        f"**ROPE:** {BINARY_SINGLE_NULL_STR} ± {BINARY_SINGLE_MIN_EFFECT_STR} ({min_diff_pct:.2f} pp) "
+        f"→ [{theta_null - rope_width/2:.4f}, {theta_null + rope_width/2:.4f}]"
+        f"  ({ROPE_WIDTH_STR} = {rope_width:.4f})  \n"
+        f"**Precision goal:** stop when {HDI_WIDTH_STR} < "
+        f"{GOAL_STR} = **{precision_goal:.4f}** ({precision_goal * 100:.2f} pp)"
+    )
 
 
 @st.dialog("🧭 Help me choose ROPE & Precision Goal", width="large")
@@ -124,8 +130,6 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         The current null hypothesis value — used to compute ROPE bounds
         for the live preview.
     """
-    # If on_click already committed a result, close the dialog immediately so
-    # the full-app rerun lets the sidebar read it before widgets are rendered.
     if "_rope_advisor_result" in st.session_state:
         st.rerun(scope="app")
 
@@ -150,10 +154,6 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         st.session_state["_advisor_prev_preset"] = preset_name
         if preset is not None:
             st.session_state["_advisor_min_diff_pct"] = float(preset["min_meaningful_diff_pct"])
-            if preset.get("precision_mode") == "As an absolute width":
-                st.session_state["_advisor_precision_mode"] = _ABSOLUTE_MODE
-            else:
-                st.session_state["_advisor_precision_mode"] = _FRACTION_MODE
             if "precision_pct" in preset:
                 st.session_state["_advisor_precision_pct"] = int(preset["precision_pct"])
 
@@ -184,9 +184,6 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         key="_advisor_min_diff_pct",
     )
 
-    # ROPE width = 2 × one-sided shift (symmetric around the null).
-    # The minimum effect size the user cares about maps to the half-width;
-    # the full ROPE width is twice that.
     rope_width = (2 * min_diff_pct / 100.0) if min_diff_pct is not None else None
 
     if rope_width is not None:
@@ -199,10 +196,8 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
 
     st.divider()
 
-    # ── Step 2 — Precision goal framing ──────────────────────────────────────
-    # TODO: consider defaulting to fraction mode and tucking absolute mode
-    #   behind an "Advanced" toggle to reduce cognitive load for new users.
-    st.markdown("#### Step 2 — How do you want to express outcome precision?")
+    # ── Step 2 — How precise? ────────────────────────────────────────────────
+    st.markdown("#### Step 2 — How precise?")
     st.caption("How precise do you need your answer to be? More precision means collecting more data.")
     with st.expander("ℹ️ Learn more"):
         st.markdown(
@@ -212,77 +207,35 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
             f"It must satisfy {GOAL_STR} ≤ {ROPE_WIDTH_STR}."
         )
 
-    # Build captions with live numbers where possible
-    _eg_rope = rope_width if rope_width is not None else 0.04
-    _eg_pct = 80
-    _eg_abs = round(_eg_rope * _eg_pct / 100, 4)
-
-    fraction_caption = (
-        f"*e.g. If {ROPE_WIDTH_STR} = {_eg_rope:.4f} and you choose {_eg_pct}%, "
-        f"you'll stop when {HDI_WIDTH_STR} ≤ {_eg_abs:.4f}"
+    default_pct = int(preset["precision_pct"]) if preset and "precision_pct" in preset else 80
+    precision_pct = st.slider(
+        f"{GOAL_STR} as % of {ROPE_WIDTH_STR}",
+        min_value=50,
+        max_value=100,
+        value=default_pct,
+        step=1,
+        format="%d%%",
+        key="_advisor_precision_pct",
+        help="70–80% is typical; above 90% requires substantially more data.",
     )
-    absolute_caption = (
-        f"*e.g. \"I want {HDI_WIDTH_STR} to be no wider than 0.05 in absolute terms\" — "
-        f"useful when you have a hard reporting requirement like ±2.5 pp. This requires {GOAL_STR} ≤ {ROPE_WIDTH_STR}.*"
-    )
-
-    default_mode_idx = 0
-    if preset and preset.get("precision_mode") == "As an absolute width":
-        default_mode_idx = 1
-
-    precision_mode = st.radio(
-        f"Express {GOAL_STR}:",
-        options=[_FRACTION_MODE, _ABSOLUTE_MODE],
-        index=default_mode_idx,
-        captions=[fraction_caption, absolute_caption],
-        key="_advisor_precision_mode",
-    )
-
-    st.divider()
-
-    # ── Step 3 — Precision level ──────────────────────────────────────────────
-    # TODO: add a caption with orientation, e.g. "70–80% is typical;
-    #   above 90% requires substantially more data."
-    st.markdown("#### Step 3 — How precise?")
 
     precision_goal = None
-
-    if precision_mode == _FRACTION_MODE:
-        default_pct = int(preset["precision_pct"]) if preset and "precision_pct" in preset else 80
-        precision_pct = st.slider(
-            f"{GOAL_STR} as % of {ROPE_WIDTH_STR}",
-            min_value=50,
-            max_value=100,
-            value=default_pct,
-            step=1,
-            format="%d%%",
-            key="_advisor_precision_pct",
+    if rope_width is not None:
+        precision_goal = rope_width * precision_pct / 100.0
+        st.caption(
+            f"→ {ROPE_WIDTH_STR} × {precision_pct}% = {GOAL_STR} = **{precision_goal:.4f}**"
         )
-        if rope_width is not None:
-            precision_goal = rope_width * precision_pct / 100.0
+
+        # Show override note if Step 3 has changed ω_goal
+        explore_omega_ss = st.session_state.get("_advisor_explore_omega")
+        if explore_omega_ss is not None and abs(explore_omega_ss - precision_goal) > 1e-6:
             st.caption(
-                f"→ {ROPE_WIDTH_STR} × {precision_pct}% = {GOAL_STR} = **{precision_goal:.4f}**"
+                f"→ overridden to {GOAL_STR} = **{explore_omega_ss:.4f}** in Step 3 below"
             )
-        else:
-            st.caption("→ Complete Step 1 first to see the computed value.")
     else:
-        precision_abs_pct = st.number_input(
-            f"Target {GOAL_STR} in percentage points. Requires {GOAL_STR} ≤ {ROPE_WIDTH_STR}.",
-            min_value=0.01,
-            max_value=50.0,
-            value=None,
-            step=0.5,
-            format="%.2f",
-            help=f"{HDI_WIDTH_STR} ≤ {GOAL_STR} for the experiment to stop.",
-            key="_advisor_precision_abs_pct",
-        )
-        if precision_abs_pct is not None:
-            precision_goal = precision_abs_pct / 100.0
-            st.caption(f"→ {GOAL_STR} = **{precision_goal:.4f}**")
+        st.caption("→ Complete Step 1 first to see the computed value.")
 
-    st.divider()
-
-    # ── Preview ───────────────────────────────────────────────────────────────
+    # ── Step 2 preview ────────────────────────────────────────────────────────
     all_ready = rope_width is not None and precision_goal is not None
     goal_too_wide = all_ready and precision_goal > rope_width
 
@@ -291,26 +244,20 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
             st.warning(
                 f"⚠️ {GOAL_STR} ({precision_goal:.4f}) must **not exceed** "
                 f"{ROPE_WIDTH_STR} ({rope_width:.4f}) for the stopping rule to be meaningful. "
-                "Increase the fraction or reduce the absolute width."
+                "Increase the fraction."
             )
         else:
-            st.success(
-                f"**ROPE:** {BINARY_SINGLE_NULL_STR} ± {BINARY_SINGLE_MIN_EFFECT_STR} ({min_diff_pct:.2f} pp) "
-                f"→ [{theta_null - rope_width/2:.4f}, {theta_null + rope_width/2:.4f}]"
-                f"  ({ROPE_WIDTH_STR} = {rope_width:.4f})  \n"
-                f"**Precision goal:** stop when {HDI_WIDTH_STR} < "
-                f"{GOAL_STR} = **{precision_goal:.4f}** ({precision_goal * 100:.2f} pp)"
-            )
+            _preview_box(theta_null, rope_width, min_diff_pct, precision_goal)
     else:
-        st.info("Complete Steps 1–3 above to see a preview.")
+        st.info("Complete Steps 1–2 above to see a preview.")
 
-    # ── Estimated sample size ────────────────────────────────────────────────
+    # ── Step 3 — Estimated sample size ────────────────────────────────────────
     if all_ready and not goal_too_wide:
         st.divider()
-        st.markdown("#### Estimated Sample Size")
+        st.markdown("#### Step 3 — Estimated Sample Size")
         st.caption(
             "How many observations would you need to reach this precision? "
-            "Adjust θ and ω below to explore."
+            "Adjust θ and ω below to explore. Changes here will be applied."
         )
 
         col_theta, col_omega = st.columns(2)
@@ -328,7 +275,7 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
             w_goal_min = 0.5 * float(rope_width)
             w_goal_max = float(rope_width)
             explore_omega = st.slider(
-                f"ω_goal (precision)",
+                "ω_goal (precision)",
                 min_value=w_goal_min,
                 max_value=w_goal_max,
                 value=float(precision_goal),
@@ -345,6 +292,8 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         st.metric(label="N_goal (estimated minimum sample size)", value=f"{n_goal_display:,}")
 
         # TODO: update z_star to derive from a user-chosen confidence level
+        # TODO: add absolute-width precision mode as an advanced option (removed
+        #   from Step 2 to reduce cognitive load; see git history for prior UI).
         with st.expander("⚙️ Advanced"):
             adv_z = st.number_input(
                 "z* (critical value)",
@@ -358,7 +307,7 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
             )
             adv_col1, adv_col2 = st.columns(2)
             with adv_col1:
-                adv_w_min = st.number_input(
+                st.number_input(
                     "Background ω min",
                     min_value=0.5 * w_goal_min,
                     max_value=w_goal_max,
@@ -368,10 +317,10 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
                     key="_advisor_w_min",
                 )
             with adv_col2:
-                adv_w_max = st.number_input(
+                st.number_input(
                     "Background ω max",
                     min_value=w_goal_min,
-                    max_value=2 *w_goal_max,
+                    max_value=2 * w_goal_max,
                     value=w_goal_max,
                     step=0.01,
                     format="%.2f",
@@ -381,8 +330,8 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
             n_goal_est_adv = binomial_rate_ci_width_to_sample_size(
                 explore_theta, explore_omega, z_star=adv_z,
             )
-            n_goal_display = max(1, int(n_goal_est_adv))
-            st.metric(label="N_goal (with custom z*)", value=f"{n_goal_display:,}")
+            n_goal_display_adv = max(1, int(n_goal_est_adv))
+            st.metric(label="N_goal (with custom z*)", value=f"{n_goal_display_adv:,}")
 
         fig = plot_n_goal_by_parameter(
             omega_goal=explore_omega,
@@ -392,6 +341,42 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
             w_goal_max=st.session_state.get("_advisor_w_max", w_goal_max),
         )
         st.pyplot(fig)
+
+        # ── Step 3 preview (shown once any explorer value has been touched) ──
+        theta_changed = abs(explore_theta - theta_null) > 1e-4
+        omega_changed = abs(explore_omega - precision_goal) > 1e-6
+
+        step3_ever_touched = st.session_state.get("_advisor_step3_touched", False)
+        if theta_changed or omega_changed:
+            st.session_state["_advisor_step3_touched"] = True
+            step3_ever_touched = True
+
+        if step3_ever_touched:
+            if theta_changed:
+                theta_note = f"θ_null updated to **{explore_theta:.2f}** (was {theta_null:.2f})"
+            else:
+                theta_note = f"θ_null remains the same at **{theta_null:.2f}**"
+
+            if omega_changed:
+                omega_note = (
+                    f"{GOAL_STR} updated to **{explore_omega:.4f}** "
+                    f"(was {precision_goal:.4f} from Step 2)"
+                )
+            else:
+                omega_note = (
+                    f"{GOAL_STR} remains the same at **{precision_goal:.4f}**"
+                )
+
+            effective_theta = explore_theta
+            effective_omega = explore_omega
+            st.success(
+                f"**Values that will be applied:**  \n"
+                f"- {theta_note}  \n"
+                f"- {omega_note}  \n"
+                f"- **ROPE:** [{effective_theta - rope_width/2:.4f}, "
+                f"{effective_theta + rope_width/2:.4f}] "
+                f"({ROPE_WIDTH_STR} = {rope_width:.4f})"
+            )
 
     # ── Apply ─────────────────────────────────────────────────────────────────
     # TODO: add a brief "what happens next" note, e.g.
