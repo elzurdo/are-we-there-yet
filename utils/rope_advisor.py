@@ -379,11 +379,13 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
             )
 
     # ── Apply ─────────────────────────────────────────────────────────────────
-    # TODO: add a brief "what happens next" note, e.g.
-    #   "These values will fill in the sidebar — then enter your observed data to get a verdict."
     st.button(
         "✅ Apply",
         type="primary",
         disabled=not all_ready or goal_too_wide,
         on_click=_on_apply_click,
+    )
+    st.caption(
+        "These values will fill in the sidebar — "
+        "then enter your observed data to get a verdict."
     )
