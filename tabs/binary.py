@@ -320,9 +320,10 @@ def _render_single_group(inputs: dict):
         variance = observed_rate * (1 - observed_rate)
         n_goal, n_additional = estimate_n_goal(variance, precision_goal, total, ci_fraction)
         st.info(
-            f"📏 **Estimated additional samples needed: ~{n_additional:,}** "
-            f"(target total: ~{n_goal:,}), based on the current observed rate "
-            f"of {BINARY_SINGLE_PARAMETER_ESTIMATE_STR}={observed_rate:{fmt}}."
+            f"📏 To achieve precision goal ω_goal={precision_goal:{fmt}}, based on the current observed rate θ̂={observed_rate:{fmt}}:  \n"
+            f"You have sampled **{total:,}** data points.  \n"
+            f"~**{n_goal:,}** samples are recommended.  \n"
+            f"That leaves at least **~{n_additional:,}** additional samples to collect."
         )
 
     peek_container = (
@@ -738,9 +739,12 @@ def _render_between_groups(inputs: dict):
             p_a, n_a, p_b, n_b, precision_goal, ci_fraction
         )
         st.info(
-            f"📏 **Estimated additional samples needed** (preserving current {n_a}/{n_b} ratio):  \n"
-            f"**{label_a}**: ~{n_a_add:,} more (target ~{n_a_goal:,})  \n"
-            f"**{label_b}**: ~{n_b_add:,} more (target ~{n_b_goal:,})"
+            f"📏 To achieve precision goal ω_goal={precision_goal:{fmt}}, based on the current observed rates "
+            f"θ̂_{label_a}={p_a:{fmt}}, θ̂_{label_b}={p_b:{fmt}} (preserving the current {n_a}/{n_b} group ratio):  \n"
+            f"**{label_a}**: You have sampled {n_a:,} data points. ~{n_a_goal:,} total are recommended. "
+            f"That leaves at least ~{n_a_add:,} additional samples to collect.  \n"
+            f"**{label_b}**: You have sampled {n_b:,} data points. ~{n_b_goal:,} total are recommended. "
+            f"That leaves at least ~{n_b_add:,} additional samples to collect."
         )
 
     peek_container = (

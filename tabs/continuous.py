@@ -259,9 +259,10 @@ def _render_single_group(inputs: dict):
         variance = sample_std ** 2
         n_goal, n_additional = estimate_n_goal(variance, precision_goal, n, ci_fraction)
         st.info(
-            f"📏 **Estimated additional samples needed: ~{n_additional:,}** "
-            f"(target total: ~{n_goal:,}), based on the current sample std "
-            f"of {sample_std:{fmt}}."
+            f"📏 You have sampled **{n:,}** data points.  \n"
+            f"~**{n_goal:,}** samples are recommended to achieve precision goal ω_goal={precision_goal:{fmt}}, "
+            f"based on the current sample standard deviation s={sample_std:{fmt}}.  \n"
+            f"That leaves at least **~{n_additional:,}** additional samples to collect."
         )
 
     peek_container = (
@@ -556,9 +557,12 @@ def _render_between_groups(inputs: dict):
             std_a, n_a, std_b, n_b, precision_goal, ci_fraction
         )
         st.info(
-            f"📏 **Estimated additional samples needed** (preserving current {n_a}/{n_b} ratio):  \n"
-            f"**{label_a}**: ~{n_a_add:,} more (target ~{n_a_goal:,})  \n"
-            f"**{label_b}**: ~{n_b_add:,} more (target ~{n_b_goal:,})"
+            f"📏 To achieve precision goal ω_goal={precision_goal:{fmt}}, based on the current sample standard deviations "
+            f"s_{label_a}={std_a:{fmt}}, s_{label_b}={std_b:{fmt}} (preserving the current {n_a}/{n_b} group ratio):  \n"
+            f"**{label_a}**: You have sampled {n_a:,} data points. ~{n_a_goal:,} total are recommended. "
+            f"That leaves at least ~{n_a_add:,} additional samples to collect.  \n"
+            f"**{label_b}**: You have sampled {n_b:,} data points. ~{n_b_goal:,} total are recommended. "
+            f"That leaves at least ~{n_b_add:,} additional samples to collect."
         )
 
     peek_container = (

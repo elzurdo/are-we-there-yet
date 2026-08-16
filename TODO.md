@@ -134,9 +134,15 @@ writes `binary_theta_null`. Step 2 shows an override caption when Step 3's
 ω_goal differs. Step 3 shows a second preview box once any slider is touched,
 reporting whether θ_null and ω_goal were updated or remain the same.
 
-### 6h. "What happens next" note near Apply
-Brief guidance after clicking Apply, e.g. "These values will fill in the sidebar —
-then enter your observed data to get a verdict." Prevents the "now what?" moment.
+### 6h. ✅ "What happens next" note near Apply
+**Done.** Added caption below Apply button: "These values will fill in the sidebar —
+then enter your observed data to get a verdict."
+
+### 6j. Add sensible y-axis ticks to the N_goal plot
+`plot_n_goal_by_parameter` currently hides y-axis ticks (`set_yticks([])`).
+For a sample-size plot, showing actual N values is more informative. Ticks
+should use rounded values in the range of interest — e.g. thousands when
+N_goal is in the thousands, hundreds when in the hundreds.
 
 ---
 
