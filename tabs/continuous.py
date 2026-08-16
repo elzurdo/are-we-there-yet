@@ -259,9 +259,9 @@ def _render_single_group(inputs: dict):
         variance = sample_std ** 2
         n_goal, n_additional = estimate_n_goal(variance, precision_goal, n, ci_fraction)
         st.info(
-            f"📏 You have sampled **{n:,}** data points.  \n"
-            f"~**{n_goal:,}** samples are recommended to achieve precision goal ω_goal={precision_goal:{fmt}}, "
-            f"based on the current sample standard deviation s={sample_std:{fmt}}.  \n"
+             f"📏 To achieve precision goal ω_goal={precision_goal:{fmt}}, based on the current sample standard deviation s={sample_std:{fmt}}: \n"
+            f"You have sampled **{n:,}** data points.  \n"
+            f"**{n_goal:,}** samples are recommended."
             f"That leaves at least **~{n_additional:,}** additional samples to collect."
         )
 
