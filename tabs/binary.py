@@ -17,7 +17,7 @@ from utils.stats import (
 )
 from utils.decision import epitg_decision
 from utils.viz import (
-    plot_posterior_binary, plot_posterior_difference, plot_two_beta_posteriors, 
+    plot_posterior_binary, plot_posterior_difference, plot_two_beta_posteriors,
     plot_nhst_posterior, plot_bayes_factor_prior_posterior,
 )
 from utils.verdict import render_verdict_display
@@ -32,6 +32,9 @@ from utils.tutorials import (
 )
 from utils.rope_advisor import rope_advisor_dialog_binary_single
 from utils.constants import BINARY_SINGLE_PARAMETER_ESTIMATE_STR, GOAL_STR, HDI_WIDTH_STR, ROPE_WIDTH_STR, BINARY_SINGLE_NULL_STR
+from utils.forced_decision import (
+    posterior_tail_probability, bayesian_expected_loss, FORCED_DECISION_REFERENCES,
+)
 
 def get_example_values(mode: str = "Single Group") -> dict:
     """Return session-state key/value pairs for a worked example."""
@@ -326,156 +329,250 @@ def _render_single_group(inputs: dict):
             f"That leaves at least **~{n_additional:,}** additional samples to collect."
         )
 
-    peek_container = (
-        st.container()
-        if result.can_stop
-        else st.expander("Let Me Peek! 👀", expanded=False)
-    )
-    with peek_container:
-        col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m2:
-            st.metric(f"HDI width {HDI_WIDTH_STR}", f"{result.hdi_width:{fmt}}",
-                       delta=f"{GOAL_STR}: {precision_goal:{fmt}}",
-                       delta_color="normal" if result.precision_met else "inverse")
-        with col_m1:
-            st.metric("HDI range", f"[{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]")
-        with col_m3:
-            st.metric(r"Observed rate $\hat{\theta}$", f"{observed_rate:{fmt}}")
-
-        # --- Plot ---
-        fig = plot_posterior_binary(result, successes=a, failures=b, decimal_places=dp)
-        st.pyplot(fig)
-
-        # --- Alternative Methods ---
-        with st.expander("⚖️ Alternative Methods", expanded=False):
-            tab_nhst, tab_bf = st.tabs(["NHST (p-value)", "Bayes Factor"])
-
-            with tab_nhst:
-                alpha = st.slider(
-                    "Significance level (α)", min_value=0.01, max_value=0.10,
-                    value=0.05, step=0.01, format="%.2f", key="binary_sg_alpha"
-                )
-
-                # Compute NHST for single proportion
-                theta_null = inputs["theta_null"]
-                se_null = np.sqrt(theta_null * (1 - theta_null) / total)
-                test_stat, p_val, decision = nhst_test(
-                    observed=observed_rate,
-                    null_value=theta_null,
-                    se=se_null,
-                    test_type="z"
-                )
-
-                col_n1, col_n2, col_n3 = st.columns(3)
-                with col_n1:
-                    st.metric("z-statistic", f"{test_stat:{fmt}}")
-                with col_n2:
-                    st.metric("p-value", f"{p_val:.4f}")
-                with col_n3:
-                    color = "🔴" if p_val < alpha else "🟢"
-                    decision_at_alpha = "Reject H₀" if p_val < alpha else "Fail to Reject H₀"
-                    st.metric(f"Decision (α={alpha:.2f})", f"{color} {decision_at_alpha}")
-
-                # NHST plot
-                from scipy.stats import norm
-                dist_null = norm(loc=theta_null, scale=se_null)
-                fig_nhst = plot_nhst_posterior(
-                    observed=observed_rate,
-                    null_value=theta_null,
-                    se=se_null,
-                    test_stat=test_stat,
-                    p_value=p_val,
-                    dist=dist_null,
-                    x_label="p",
-                    decimal_places=dp
-                )
-                st.pyplot(fig_nhst)
-
-                st.markdown(NHST_LIMITATIONS)
-
-            with tab_bf:
-                st.markdown(BAYES_FACTOR_INTRO)
-
-                # Prior selection
-                col_p1, col_p2 = st.columns([1, 2])
-                with col_p1:
-                    prior_choice = st.selectbox(
-                        "Prior for H₁",
-                        options=list(PRIOR_SPECS.keys()),
-                        format_func=lambda x: x.replace("_", " ").title(),
-                        key="binary_sg_bf_prior"
-                    )
-                with col_p2:
-                    st.caption(PRIOR_SPECS[prior_choice]["description"])
-
-                # Interpretation scale
-                interp_scale = st.radio(
-                    "Interpretation scale",
-                    options=["jeffreys", "kass_raftery"],
-                    format_func=lambda x: "Jeffreys (1961)" if x == "jeffreys" else "Kass & Raftery (1995)",
-                    horizontal=True,
-                    key="binary_sg_bf_scale"
-                )
-
-                # Compute Bayes Factor
-                prior_alpha = PRIOR_SPECS[prior_choice]["alpha"]
-                prior_beta = PRIOR_SPECS[prior_choice]["beta"]
-                theta_null = inputs["theta_null"]
-
-                bf10 = binary_single_group_bayes_factor(
-                    successes=a,
-                    n=total,
-                    theta_null=theta_null,
-                    prior_alpha=prior_alpha,
-                    prior_beta=prior_beta,
-                )
-
-                # Interpret
-                if interp_scale == "jeffreys":
-                    category, emoji = interpret_bayes_factor_jeffreys(bf10)
-                else:
-                    category, emoji = interpret_bayes_factor_kass_raftery(bf10)
-
-                # Display
-                col_b1, col_b2 = st.columns(2)
-                with col_b1:
-                    st.metric("BF₁₀", f"{bf10:.3f}")
-                with col_b2:
-                    st.metric("Interpretation", f"{emoji} {category}")
-
-                # Optional: show BF₀₁
-                bf01 = 1 / bf10
-                st.caption(f"BF₀₁ (evidence for H₀) = {bf01:.3f}")
-
-                st.markdown(BAYES_FACTOR_INTERPRETATION)
-
-                # Visualization toggle
-                show_savage_dickey = st.checkbox(
-                    "Show Savage-Dickey density ratio",
-                    value=False,
-                    key="binary_sg_bf_savage_dickey",
-                    help="Visualize BF as the ratio of prior/posterior density heights at θ₀"
-                )
-
-                # Plot prior vs posterior
-                fig_bf = plot_bayes_factor_prior_posterior(
-                    successes=a,
-                    failures=b,
-                    prior_alpha=prior_alpha,
-                    prior_beta=prior_beta,
-                    theta_null=theta_null,
-                    bf_10=bf10,
-                    show_density_ratio=show_savage_dickey,
-                    decimal_places=dp,
-                )
-                st.pyplot(fig_bf)
-
-
-                
+    if result.can_stop:
+        _render_single_group_peek(result, inputs, observed_rate, a, b)
+    else:
+        with st.expander("Let Me Peek! 👀", expanded=False):
+            tab_peek, tab_decide = st.tabs(["🔍 Posterior Peek", "Decide Now! 🎲"])
+            with tab_peek:
+                _render_single_group_peek(result, inputs, observed_rate, a, b)
+            with tab_decide:
+                _render_forced_decision_single(result, inputs, observed_rate, successes, failures)
 
     # --- Maths Tutorial ---
     with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
         st.markdown(MATHS_BINARY_SINGLE_GROUP)
+
+
+def _render_single_group_peek(result, inputs, observed_rate, a, b):
+    """Render metrics, posterior plot, and alternative methods for single-group binary."""
+    dp = inputs["decimal_places"]
+    fmt = f".{dp}f"
+    precision_goal = inputs["precision_goal"]
+    total = inputs["total"]
+    theta_null = inputs["theta_null"]
+
+    col_m1, col_m2, col_m3 = st.columns(3)
+    with col_m2:
+        st.metric(f"HDI width {HDI_WIDTH_STR}", f"{result.hdi_width:{fmt}}",
+                   delta=f"{GOAL_STR}: {precision_goal:{fmt}}",
+                   delta_color="normal" if result.precision_met else "inverse")
+    with col_m1:
+        st.metric("HDI range", f"[{result.hdi_min:{fmt}}, {result.hdi_max:{fmt}}]")
+    with col_m3:
+        st.metric(r"Observed rate $\hat{\theta}$", f"{observed_rate:{fmt}}")
+
+    fig = plot_posterior_binary(result, successes=a, failures=b, decimal_places=dp)
+    st.pyplot(fig)
+
+    with st.expander("⚖️ Alternative Methods", expanded=False):
+        tab_nhst, tab_bf = st.tabs(["NHST (p-value)", "Bayes Factor"])
+
+        with tab_nhst:
+            alpha = st.slider(
+                "Significance level (α)", min_value=0.01, max_value=0.10,
+                value=0.05, step=0.01, format="%.2f", key="binary_sg_alpha"
+            )
+
+            se_null = np.sqrt(theta_null * (1 - theta_null) / total)
+            test_stat, p_val, _ = nhst_test(
+                observed=observed_rate,
+                null_value=theta_null,
+                se=se_null,
+                test_type="z"
+            )
+
+            col_n1, col_n2, col_n3 = st.columns(3)
+            with col_n1:
+                st.metric("z-statistic", f"{test_stat:{fmt}}")
+            with col_n2:
+                st.metric("p-value", f"{p_val:.4f}")
+            with col_n3:
+                color = "🔴" if p_val < alpha else "🟢"
+                decision_at_alpha = "Reject H₀" if p_val < alpha else "Fail to Reject H₀"
+                st.metric(f"Decision (α={alpha:.2f})", f"{color} {decision_at_alpha}")
+
+            from scipy.stats import norm
+            dist_null = norm(loc=theta_null, scale=se_null)
+            fig_nhst = plot_nhst_posterior(
+                observed=observed_rate,
+                null_value=theta_null,
+                se=se_null,
+                test_stat=test_stat,
+                p_value=p_val,
+                dist=dist_null,
+                x_label="p",
+                decimal_places=dp
+            )
+            st.pyplot(fig_nhst)
+
+            st.markdown(NHST_LIMITATIONS)
+
+        with tab_bf:
+            st.markdown(BAYES_FACTOR_INTRO)
+
+            col_p1, col_p2 = st.columns([1, 2])
+            with col_p1:
+                prior_choice = st.selectbox(
+                    "Prior for H₁",
+                    options=list(PRIOR_SPECS.keys()),
+                    format_func=lambda x: x.replace("_", " ").title(),
+                    key="binary_sg_bf_prior"
+                )
+            with col_p2:
+                st.caption(PRIOR_SPECS[prior_choice]["description"])
+
+            interp_scale = st.radio(
+                "Interpretation scale",
+                options=["jeffreys", "kass_raftery"],
+                format_func=lambda x: "Jeffreys (1961)" if x == "jeffreys" else "Kass & Raftery (1995)",
+                horizontal=True,
+                key="binary_sg_bf_scale"
+            )
+
+            prior_alpha = PRIOR_SPECS[prior_choice]["alpha"]
+            prior_beta = PRIOR_SPECS[prior_choice]["beta"]
+
+            bf10 = binary_single_group_bayes_factor(
+                successes=a,
+                n=total,
+                theta_null=theta_null,
+                prior_alpha=prior_alpha,
+                prior_beta=prior_beta,
+            )
+
+            if interp_scale == "jeffreys":
+                category, emoji = interpret_bayes_factor_jeffreys(bf10)
+            else:
+                category, emoji = interpret_bayes_factor_kass_raftery(bf10)
+
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                st.metric("BF₁₀", f"{bf10:.3f}")
+            with col_b2:
+                st.metric("Interpretation", f"{emoji} {category}")
+
+            bf01 = 1 / bf10
+            st.caption(f"BF₀₁ (evidence for H₀) = {bf01:.3f}")
+
+            st.markdown(BAYES_FACTOR_INTERPRETATION)
+
+            show_savage_dickey = st.checkbox(
+                "Show Savage-Dickey density ratio",
+                value=False,
+                key="binary_sg_bf_savage_dickey",
+                help="Visualize BF as the ratio of prior/posterior density heights at θ₀"
+            )
+
+            fig_bf = plot_bayes_factor_prior_posterior(
+                successes=a,
+                failures=b,
+                prior_alpha=prior_alpha,
+                prior_beta=prior_beta,
+                theta_null=theta_null,
+                bf_10=bf10,
+                show_density_ratio=show_savage_dickey,
+                decimal_places=dp,
+            )
+            st.pyplot(fig_bf)
+
+
+def _render_forced_decision_single(result, inputs, observed_rate, successes, failures):
+    """Render the 'Decide Now! 🎲' tab content for single-group binary."""
+    dp = inputs["decimal_places"]
+    fmt = f".{dp}f"
+    theta_null = inputs["theta_null"]
+    rope_min = inputs["rope_min"]
+    rope_max = inputs["rope_max"]
+
+    st.info(
+        "DPitG stopping criteria are not yet met. These methods allow a provisional decision "
+        "based on the current posterior. Treat results with caution — the posterior is still imprecise."
+    )
+
+    # ──  Posterior Tail Probability ────────────────────────────────────────
+    st.markdown("#### Posterior Tail Probability")
+
+    prob, direction = posterior_tail_probability(successes, failures, theta_null, observed_rate)
+
+    if direction == "above":
+        prob_label = "P(θ > θ_null | data)"
+        dir_caption = (
+            f"Observed rate ({observed_rate:{fmt}}) ≥ θ_null ({theta_null:{fmt}}) "
+            f"→ reporting P(θ > θ_null | data)"
+        )
+    else:
+        prob_label = "P(θ < θ_null | data)"
+        dir_caption = (
+            f"Observed rate ({observed_rate:{fmt}}) < θ_null ({theta_null:{fmt}}) "
+            f"→ reporting P(θ < θ_null | data)"
+        )
+
+    st.caption(dir_caption)
+
+    col_prob, _ = st.columns([1, 2])
+    with col_prob:
+        st.metric(prob_label, f"{prob:.4f}")
+
+    threshold = st.slider(
+        "Decision threshold",
+        min_value=0.80, max_value=0.99, value=0.95, step=0.01, format="%.2f",
+        key="forced_threshold_slider",
+    )
+
+    if prob >= threshold:
+        st.warning(
+            f"⚠️ **Forced Decision: Reject θ_null** — "
+            f"effect is {direction} null with {prob:.1%} posterior probability "
+            f"(threshold {threshold:.2f} met)."
+        )
+    else:
+        st.warning(
+            f"⚠️ **Forced Decision: Insufficient evidence** — "
+            f"posterior probability {prob:.3f} < threshold {threshold:.2f}. "
+            f"No directional forced verdict."
+        )
+
+    # ── Bayesian Expected Loss ────────────────────────────────────────────
+    with st.expander("⚖️ Account for decision costs (Bayesian Expected Loss)", expanded=False):
+        loss_ratio = st.slider(
+            "Cost ratio  L₀ / L₁",
+            min_value=0.1, max_value=10.0, value=1.0, step=0.1, format="%.1f",
+            key="forced_loss_ratio_slider",
+            help=(
+                "L₀ = cost of wrongly accepting H₀ (false positive).  "
+                "L₁ = cost of wrongly rejecting H₀ (false negative).  "
+                "Ratio = 1 → symmetric loss (majority-posterior rule)."
+            ),
+        )
+
+        p_inside, p_outside, el_accept, el_reject, forced_accept = bayesian_expected_loss(
+            successes, failures, rope_min, rope_max, loss_ratio
+        )
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("P(θ inside ROPE | data)", f"{p_inside:.4f}")
+            st.metric("EL(Accept H₀)", f"{el_accept:.4f}")
+        with col2:
+            st.metric("P(θ outside ROPE | data)", f"{p_outside:.4f}")
+            st.metric("EL(Reject H₀)", f"{el_reject:.4f}")
+
+        if forced_accept:
+            st.warning(
+                f"⚠️ **Forced Decision: Accept θ_null** — "
+                f"expected loss favors Accept (EL={el_accept:.4f} < EL={el_reject:.4f})."
+            )
+        else:
+            st.warning(
+                f"⚠️ **Forced Decision: Reject θ_null** — "
+                f"expected loss favors Reject (EL={el_reject:.4f} < EL={el_accept:.4f})."
+            )
+
+    # ── Methods & References ──────────────────────────────────────────────────
+    with st.expander("📚 Methods & References", expanded=False):
+        st.markdown(FORCED_DECISION_REFERENCES)
+
 
 # ──────────────────────────────────────────────────────────────
 # Between Groups
@@ -794,7 +891,7 @@ def _render_between_groups(inputs: dict):
 
                 # Compute NHST for difference in proportions
                 theta_null = inputs["theta_null"]
-                test_stat, p_val, decision = nhst_test(
+                test_stat, p_val, _ = nhst_test(
                     observed=delta,
                     null_value=theta_null,
                     se=se,
