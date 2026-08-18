@@ -373,7 +373,54 @@ of the residual uncertainty.
 
 ---
 
-## 8. (Optional) Build a skill for the app
+## 8. Code-quality cleanup for `utils/forced_decision.py` + `tabs/binary.py`
+
+Identified by a 4-agent review after the Forced-Decision feature was implemented.
+These are code-quality items only — no user-visible behaviour changes.
+
+### 8a. Extract `_beta_params()` helper (reuse / simplification)
+
+`max(successes, 1)` / `max(failures, 1)` is repeated independently in both
+`posterior_tail_probability` and `bayesian_expected_loss` inside
+`utils/forced_decision.py`. Extract a private `_beta_params(successes, failures)`
+one-liner and call it from both functions.
+
+### 8b. Collapse the direction if/else in `_render_forced_decision_single` (simplification)
+
+The `prob_label` / `dir_caption` block in `tabs/binary.py` branches on `direction`
+with two near-identical f-strings (only the inequality sign differs). Collapse to:
+```python
+ineq, op = ("≥", ">") if direction == "above" else ("<", "<")
+prob_label = f"P(θ {op} θ_null | data)"
+dir_caption = f"Observed rate ({observed_rate:{fmt}}) {ineq} θ_null ({theta_null:{fmt}}) → reporting P(θ {op} θ_null | data)"
+```
+
+### 8c. Collapse the EL verdict `st.warning()` pair (simplification)
+
+The Accept / Reject `st.warning()` calls share identical structure. Collapse to:
+```python
+verdict, lo, hi = ("Accept", el_accept, el_reject) if forced_accept else ("Reject", el_reject, el_accept)
+st.warning(f"⚠️ **Forced Decision: {verdict} θ_null** — expected loss favors {verdict} (EL={lo:.4f} < EL={hi:.4f}).")
+```
+
+### 8d. Add `render_forced_verdict()` to `utils/verdict.py` (altitude)
+
+The `"⚠️ **Forced Decision: ...**"` banner is assembled inline in
+`_render_forced_decision_single` and will be copy-pasted into three more tabs
+(binary between-groups, continuous single, continuous between). Add a shared
+`render_forced_verdict(verdict_label, message)` to `utils/verdict.py` — parallel
+to `render_verdict_display()` — so all tabs use one canonical function.
+
+### 8e. Add UI label constants to `utils/constants.py` (altitude)
+
+The expander / tab labels `"Let Me Peek! 👀 · Decide Now! 🎲"`, `"🔍 Posterior Peek"`,
+and `"Decide Now! 🎲"` will be repeated across every tab that adopts the
+Forced-Decision pattern. Define them once in `utils/constants.py` and import
+everywhere.
+
+---
+
+## 9. (Optional) Build a skill for the app
 
 Consider creating a `.claude/skills/run-app.md` skill for the are-we-there-yet repo
 that tells Claude Code how to launch and test the Streamlit app (`streamlit run app.py`),
