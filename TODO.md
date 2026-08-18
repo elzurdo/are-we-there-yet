@@ -146,7 +146,234 @@ N_goal is in the thousands, hundreds when in the hundreds.
 
 ---
 
-## 7. (Optional) Build a skill for the app
+## 7. ✅ Forced-Decision Frameworks (when budget is exhausted)
+
+**Status: ✅ Implemented for single-group binary** — `utils/forced_decision.py` +
+`tabs/binary.py`.
+
+When `result.can_stop` is False (verdict is `NEEDS_MORE_DATA` or `INCONCLUSIVE`),
+the "Let Me Peek! 👀" expander is replaced by a **"Let Me Peek! 👀 · Decide Now! 🎲"**
+collapsed expander containing two tabs:
+- **🔍 Posterior Peek** — existing metrics, posterior plot, and alternative methods
+- **Decide Now! 🎲** — risk-based forced decision (7a + 7b below)
+
+### 7a. ✅ Posterior Tail Probability — implemented
+
+`posterior_tail_probability(successes, failures, theta_null, observed_rate)` in
+`utils/forced_decision.py`. Direction auto-detected from observed rate vs θ_null.
+UI: metric + decision threshold slider (default 0.95) + amber forced-verdict box.
+
+### 7b. ✅ Bayesian Expected Loss — implemented
+
+`bayesian_expected_loss(successes, failures, rope_min, rope_max, loss_ratio)` in
+`utils/forced_decision.py`. UI: single cost-ratio slider L₀/L₁ (default 1×) inside
+"⚖️ Account for decision costs" expander + EL metrics + amber forced-verdict box.
+
+A **📚 Methods & References** expander inside "Decide Now!" shows the equations
+and citations for both 7a and 7b.
+
+### Leave as TODOs
+
+- 7c (Predictive Probability of Success) — useful retrospective diagnostic; no directional call
+- 7d (Minimum Bayes Factor) — for expert users only; low interpretability
+- 7e (One-Sided ROPE / single boundary) — natural extension once 7a is live
+- 7f (Clinical trial adaptive frameworks) — reference material only
+
+### 7 follow-up: Apply to other data types
+
+Apply the same "Decide Now!" pattern to:
+- Binary between-groups
+- Continuous single-group
+- Continuous between-groups
+
+Do in a separate session after validating the single-group binary pattern.
+
+---
+
+### 7a. Posterior Tail Probability (Probability of Direction)
+
+**Description.** Compute P(θ > θ_null | data) directly from the Beta(k+1, n−k+1)
+posterior. This is the fraction of posterior mass on the "effect" side of the null.
+The complementary quantity, min(PD, 1−PD), is sometimes called the *probability of
+direction* (PD). It is the Bayesian analogue of a one-sided p-value.
+
+**Formula.** For Beta(α, β) posterior:
+```
+P(θ > θ_null | data) = 1 − CDF_Beta(θ_null; α, β)
+```
+Standard thresholds mirror frequentist conventions: 0.95 (≈ one-sided α=0.05),
+0.975 (≈ one-sided α=0.025), 0.99 (≈ one-sided α=0.01). Equivalently for
+two-sided: report whether this probability clears 0.975 in either direction.
+
+**Caveats.** Thresholds are arbitrary conventions, not calibrated to posterior
+uncertainty. A posterior that just clears 0.95 from a wide, uninformative posterior
+is very different from the same number from a concentrated one.
+
+**Interpretability.** High — "there is a 97% probability that θ exceeds 0.5."
+
+**References.**
+- Makowski et al. (2019), "Indices of Effect Existence and Significance in the
+  Bayesian Framework," *Frontiers in Psychology*.
+  [arXiv:2005.13181](https://arxiv.org/abs/2005.13181)
+- Kruschke & Liddell (2018), *Psychon Bull Rev* — HDI+ROPE decision rule context.
+- Bayes Rules! textbook, Ch. 8: https://www.bayesrulesbook.com/chapter-8
+
+---
+
+### 7b. Bayesian Expected Loss (Optimal Bayes Action)
+
+**Description.** Assign costs to the two error types: L₀ = cost of wrongly
+rejecting H₀ (false positive), L₁ = cost of wrongly accepting H₀ (false negative).
+The Bayes-optimal action is whichever action has lower posterior expected loss.
+
+**Formula.**
+```
+EL(Accept | data) = L₀ · P(θ outside ROPE | data)
+EL(Reject | data) = L₁ · P(θ inside ROPE  | data)
+
+Accept H₀  if  EL(Accept) < EL(Reject)
+Reject H₀  if  EL(Reject) < EL(Accept)
+```
+Under symmetric 0-1 loss (L₀ = L₁), this reduces to: Accept if
+P(θ inside ROPE | data) > 0.5, Reject otherwise — i.e., go with the majority
+of the posterior. Asymmetric loss reflects domain context (e.g. drug safety:
+false positives more costly → set L₀ >> L₁).
+
+**Interpretability.** Medium — requires the user to specify loss ratio L₀/L₁,
+but this makes the trade-off explicit and honest.
+
+**References.**
+- Berger (1985), *Statistical Decision Theory and Bayesian Analysis* (Springer).
+- Stats with R textbook, Ch. 3:
+  https://statswithr.github.io/book/losses-and-decision-making.html
+- Posterior Expected Loss Calculator:
+  https://metricgate.com/docs/posterior-expected-loss-decision/
+
+---
+
+### 7c. Predictive Probability of Success (PPoS)
+
+**Description.** Given current data (k successes, n trials), compute the
+probability that if the trial continued to N_max, the DPitG criterion *would*
+eventually be met. Uses the Beta-Binomial predictive distribution over the
+n* = N_max − n remaining observations.
+
+**Formula.** Posterior after n trials: Beta(k+1, n−k+1).
+Future successes among n* remaining: BetaBinomial(n*, k+1, n−k+1).
+Sum over all possible future outcomes (k*=0..n*) weighted by this distribution:
+
+```
+PPoS = Σ_{k*=0}^{n*}  P(k* | BetaBinom) · 1[DPitG met at k+k*, n_max]
+```
+
+If PPoS < threshold (e.g. 10–20%), the trial is "futile" — even collecting more
+data is unlikely to produce a conclusive result. At budget exhaustion, this
+collapses to a simple futility label rather than a directional decision.
+
+**Interpretability.** High — "given your current data, there is only an 8%
+chance you would ever reach a conclusive result."
+
+**References.**
+- Chen et al. (2019), "Application of Bayesian predictive probability for
+  interim futility analysis in single-arm phase II trial," *Translational
+  Cancer Research*. [PMC6711387](https://pmc.ncbi.nlm.nih.gov/articles/PMC6711387/)
+- Cook (2006), "Predictive Probability Interim Analysis," MD Anderson:
+  https://biostatistics.mdanderson.org/SoftwareDownload/SoftwareFiles/PredictiveProbabilit/PredictiveInterimAnalysis.pdf
+
+---
+
+### 7d. Minimum Bayes Factor (MBF)
+
+**Description.** The MBF is the *strongest possible* evidence against H₀ that
+any prior could generate for a given p-value. It provides a Bayes-factor lower
+bound without specifying a full prior. Developed by Sellke, Bayarri & Berger
+(2001) as a way to "calibrate" a frequentist p-value into Bayesian language.
+
+**Formula.** Given two-sided p-value p (from binomial or normal approximation):
+```
+MBF(p) = −e · p · ln(p)      for p < 1/e  (≈ 0.368)
+MBF(p) = 1                   otherwise
+```
+A p-value of 0.05 gives MBF ≈ 0.41 — so even at p=0.05, the data are at most
+2.4:1 against H₀, far weaker than commonly believed. This is the key result:
+p-values systematically overstate the evidence.
+
+**Caveat.** MBF does not depend on sample size, so it becomes increasingly
+conservative for large n. The R package `pcal` implements this calibration.
+
+**Interpretability.** Low for non-statisticians — requires explaining what a
+Bayes factor is. But the punchline ("p=0.05 is surprisingly weak evidence") is
+memorable.
+
+**References.**
+- Sellke, Bayarri & Berger (2001), "Calibration of P Values for Testing Precise
+  Null Hypotheses," *The American Statistician* 55(1):62–71.
+  https://www.dcscience.net/Sellke-Bayarri-Berger-calibration-of-P-2001.pdf
+- `pcal` R package: https://ptfonseca.github.io/pcal/
+
+---
+
+### 7e. One-Sided ROPE / Single Decision Boundary
+
+**Description.** Instead of a symmetric ROPE = [θ_null ± Δ/2], use only one
+boundary in the relevant direction. For example, if a treatment is considered
+meaningful only if θ > θ_null + Δ_min, compute P(θ > θ_null + Δ_min | data).
+This is equivalent to a Bayesian one-sided equivalence/superiority test.
+
+This differs from the tail probability (7a) in that the threshold is shifted by
+Δ_min (the minimum practically relevant effect), so it tests *practical* rather
+than *statistical* significance.
+
+**Formula.**
+```
+P(θ > θ_null + Δ_min | data) = 1 − CDF_Beta(θ_null + Δ_min; k+1, n−k+1)
+```
+
+**Interpretability.** High — "there is an 89% probability that the true rate
+exceeds the minimum practically meaningful threshold."
+
+**References.**
+- Lakens (2017), "ROPE and Equivalence Testing: Practically Equivalent?"
+  http://daniellakens.blogspot.com/2017/02/rope-and-equivalence-testing.html
+- `bayestestR` package ROPE documentation:
+  https://easystats.github.io/bayestestR/articles/region_of_practical_equivalence.html
+
+---
+
+### 7f. Clinical Trial Adaptive Stopping: Conditional Assurance & Futility Bounds
+
+**Description.** In adaptive trial design, when N_max is reached without a
+conclusive verdict, the standard practice is one of:
+
+1. **Declare futility** — if PPoS (7c) was below threshold at any interim, the
+   trial is stopped and the intervention considered not promising.
+2. **Report the posterior** — present P(θ outside ROPE | data) with no binary
+   verdict, letting domain experts decide.
+3. **Conditional assurance** — the probability of success at final analysis
+   given the trial was not stopped for futility, integrated over the prior.
+   Unlike conditional power, it does not require specifying the true effect at
+   interim and is robust to early-stopping selection bias.
+
+**Practical recommendation for this app.** At budget exhaustion, present:
+(a) the posterior tail probability as a continuous evidence measure, (b) the
+expected-loss comparison if the user can supply loss weights, and (c) a PPoS
+that communicates retrospectively how unlikely conclusiveness was given the data.
+Avoid committing to a hard binary verdict without explicit user acknowledgment
+of the residual uncertainty.
+
+**References.**
+- Gsponer et al. (2014), "A practical guide to Bayesian group sequential designs,"
+  *Pharmaceutical Statistics* — conditional assurance framework.
+- Jennison & Turnbull (1999), *Group Sequential Methods with Applications to
+  Clinical Trials* (Chapman & Hall) — frequentist futility bounds (O'Brien-Fleming,
+  Peto-Haybittle) for context.
+- BMC Medical Research Methodology (2020), "Do we need to adjust for interim
+  analyses in a Bayesian adaptive trial design?"
+  https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/s12874-020-01042-7
+
+---
+
+## 8. (Optional) Build a skill for the app
 
 Consider creating a `.claude/skills/run-app.md` skill for the are-we-there-yet repo
 that tells Claude Code how to launch and test the Streamlit app (`streamlit run app.py`),
