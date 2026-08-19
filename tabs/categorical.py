@@ -92,7 +92,7 @@ def sidebar_inputs() -> dict:
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
 
     theta_null = st.sidebar.number_input(
-        "Null hypothesis (δ₀)", min_value=-1.0, max_value=1.0,
+        "Null hypothesis (Δ₀)", min_value=-1.0, max_value=1.0,
         value=0.0, step=0.01, format="%.4f", key="cat_theta_null",
         help="Typically 0 (no difference from reference)"
     )
@@ -106,7 +106,7 @@ def sidebar_inputs() -> dict:
 
     if rope_mode == "Full width (symmetric)":
         rope_width = st.sidebar.number_input(
-            "ROPE width (Δ_ROPE)", min_value=0.001, max_value=2.0,
+            "ROPE width (ω_ROPE)", min_value=0.001, max_value=2.0,
             value=0.10, step=0.01, format="%.3f", key="cat_rope_width",
         )
         rope_min = theta_null - rope_width / 2

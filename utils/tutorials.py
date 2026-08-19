@@ -358,14 +358,14 @@ GLOSSARY_TABLE = """
       <td>Point estimate of the true proportion from the current sample: &theta;&#x0302; = s / n.</td>
     </tr>
     <tr>
-      <td>Δ<sub>ROPE</sub></td>
+      <td>ω<sub>ROPE</sub></td>
       <td>ROPE Width</td>
-      <td>Δ<sub>ROPE</sub> = ROPE<sub>max</sub> − ROPE<sub>min</sub>. Effects inside this band are considered practically equivalent to the null.</td>
+      <td>ω<sub>ROPE</sub> = ROPE<sub>max</sub> − ROPE<sub>min</sub>. Effects inside this band are considered practically equivalent to the null.</td>
     </tr>
     <tr>
       <td>ω<sub>goal</sub></td>
       <td>Precision Goal</td>
-      <td>Target posterior width used as a stopping criterion.<br>By definition ω<sub>goal</sub> ≤ Δ<sub>ROPE</sub>.</td>
+      <td>Target posterior width used as a stopping criterion.<br>By definition ω<sub>goal</sub> ≤ ω<sub>ROPE</sub>.</td>
     </tr>
     <tr>
       <td>ω<sub>HDI</sub></td>

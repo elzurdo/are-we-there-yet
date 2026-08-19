@@ -34,8 +34,8 @@ This is categorically different from NHST: both Accept and Reject are affirmativ
 
 ### Key Parameters (must be set before data collection)
 
-- **ROPE** = [ROPE_min, ROPE_max]: region of practical equivalence around the null (width Δ_ROPE)
-- **ω_goal** (precision goal): target HDI width; must satisfy ω_goal ≤ Δ_ROPE
+- **ROPE** = [ROPE_min, ROPE_max]: region of practical equivalence around the null (width ω_ROPE)
+- **ω_goal** (precision goal): target HDI width; must satisfy ω_goal ≤ ω_ROPE
 - **N_max**: maximum sample size / budget cap
 
 ### Planning Formula
@@ -63,7 +63,7 @@ N_goal is maximised when the estimand equals 0.5 (binary) or when variance is la
 - **DPitG**: 2.2% inconclusive rate (2.6× gain), zero false positives, median stop at 4.7% above N_goal
 - **HDI+ROPE**: 1.8% inconclusive rate but **6.3% false-positive rate**
 
-DPitG's conclusiveness holds nearly flat (97–98%) across the ω_goal range tested (0.06–0.10); PitG's collapses to 0% at ω_goal = Δ_ROPE.
+DPitG's conclusiveness holds nearly flat (97–98%) across the ω_goal range tested (0.06–0.10); PitG's collapses to 0% at ω_goal = ω_ROPE.
 
 ### Scope and Limitations
 

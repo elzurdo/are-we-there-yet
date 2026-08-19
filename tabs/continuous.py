@@ -111,7 +111,7 @@ def _sidebar_single_group() -> dict:
 
     if rope_mode == "Full width (symmetric)":
         rope_width = st.sidebar.number_input(
-            "ROPE width (Δ_ROPE)", min_value=0.001,
+            "ROPE width (ω_ROPE)", min_value=0.001,
             value=10.0, step=0.1, format="%.3f", key="cont_rope_width",
         )
         rope_min = theta_null - rope_width / 2
@@ -385,7 +385,7 @@ def _sidebar_between_groups() -> dict:
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
 
     theta_null = st.sidebar.number_input(
-        "Null hypothesis (δ₀ = μ_A − μ_B)", value=0.0, step=0.1,
+        "Null hypothesis (Δ₀ = μ_A − μ_B)", value=0.0, step=0.1,
         format="%.4f", key="cont_bg_theta_null",
     )
 
@@ -398,7 +398,7 @@ def _sidebar_between_groups() -> dict:
 
     if rope_mode == "Full width (symmetric)":
         rope_width = st.sidebar.number_input(
-            "ROPE width (Δ_ROPE)", min_value=0.001,
+            "ROPE width (ω_ROPE)", min_value=0.001,
             value=5.0, step=0.1, format="%.3f", key="cont_bg_rope_width",
         )
         rope_min = theta_null - rope_width / 2

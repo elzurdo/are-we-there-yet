@@ -659,7 +659,7 @@ def _sidebar_between_groups() -> dict:
     if "bg_theta_null" not in st.session_state:
         st.session_state["bg_theta_null"] = 0.0
     theta_null = st.sidebar.number_input(
-        "Null hypothesis (δ₀ = p_A − p_B)", min_value=-1.0, max_value=1.0,
+        "Null hypothesis (Δ₀ = p_A − p_B)", min_value=-1.0, max_value=1.0,
         step=0.01, format="%.4f", key="bg_theta_null",
     )
 
@@ -674,7 +674,7 @@ def _sidebar_between_groups() -> dict:
         if "bg_rope_width" not in st.session_state:
             st.session_state["bg_rope_width"] = 0.10
         rope_width = st.sidebar.number_input(
-            "ROPE width (Δ_ROPE)", min_value=0.001, max_value=2.0,
+            "ROPE width (ω_ROPE)", min_value=0.001, max_value=2.0,
             step=0.01, format="%.3f", key="bg_rope_width",
         )
         rope_min = theta_null - rope_width / 2

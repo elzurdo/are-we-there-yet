@@ -25,6 +25,7 @@ from utils.constants import (
     GOAL_STR,
     HDI_WIDTH_STR,
     ROPE_WIDTH_STR,
+    ROPE_HALF_WIDTH_STR,
     BINARY_SINGLE_OBSERVE_STR,
 )
 from utils.stats import (
@@ -196,6 +197,7 @@ def _steps_1_and_2(
     effect_label=None,
     step1_caption: str = "What's the smallest change in proportion your team would actually act on?",
     step1_learn_more: str = None,
+    step1_help: str = None,
 ):
     """Render Steps 1 and 2 (ROPE width and precision goal) and return computed values.
 
@@ -241,16 +243,19 @@ def _steps_1_and_2(
         with st.expander("ℹ️ Learn more"):
             st.markdown(step1_learn_more)
 
-    default_diff = float(preset["min_meaningful_diff_pct"]) if preset else None
+    _help = step1_help or f"The ROPE spans ±{effect_label} around {null_label}. {ROPE_WIDTH_STR} = 2{effect_label}."
+    _diff_kwargs = {}
+    if f"{advisor_prefix}_min_diff_pct" not in st.session_state:
+        _diff_kwargs["value"] = float(preset["min_meaningful_diff_pct"]) if preset else None
     min_diff_pct = st.number_input(
         f"Minimum meaningful {effect_label} around each side of {null_label} (percentage points)",
         min_value=0.01,
         max_value=50.0,
-        value=default_diff,
         step=0.5,
         format="%.2f",
-        help=f"The ROPE spans ±{effect_label} around {null_label}. {ROPE_WIDTH_STR} = 2{effect_label}.",
+        help=_help,
         key=f"{advisor_prefix}_min_diff_pct",
+        **_diff_kwargs,
     )
 
     rope_width = (2 * min_diff_pct / 100.0) if min_diff_pct is not None else None
@@ -274,16 +279,18 @@ def _steps_1_and_2(
             f"It must satisfy {GOAL_STR} ≤ {ROPE_WIDTH_STR}."
         )
 
-    default_pct = int(preset["precision_pct"]) if preset and "precision_pct" in preset else 80
+    _pct_kwargs = {}
+    if f"{advisor_prefix}_precision_pct" not in st.session_state:
+        _pct_kwargs["value"] = int(preset["precision_pct"]) if preset and "precision_pct" in preset else 80
     precision_pct = st.slider(
         f"{GOAL_STR} as % of {ROPE_WIDTH_STR}",
         min_value=50,
         max_value=100,
-        value=default_pct,
         step=1,
         format="%d%%",
         key=f"{advisor_prefix}_precision_pct",
         help="70–80% is typical; above 90% requires substantially more data.",
+        **_pct_kwargs,
     )
 
     precision_goal = None
@@ -508,7 +515,7 @@ def rope_advisor_dialog_binary_between_groups(
     Parameters
     ----------
     delta_null : float
-        Current null hypothesis for the difference (δ₀ = p_A − p_B).
+        Current null hypothesis for the difference (Δ₀ = p_A − p_B).
     p_a_default : float
         Expected rate for Group A — pre-populates the Step 3 p_A slider.
     p_b_default : float
@@ -521,10 +528,10 @@ def rope_advisor_dialog_binary_between_groups(
 
     learn_more_bg = (
         f"If Group A's rate is p_A = 0.50 and Group B's is p_B = 0.52, "
-        f"the difference δ = p_A − p_B = −0.02 — a 2 pp effect.  \n"
+        f"the difference Δ = p_A − p_B = −0.02 — a 2 pp effect.  \n"
         f"The **ROPE** (Region of Practical Equivalence) spans "
-        f"±{BINARY_SINGLE_MIN_EFFECT_STR} around {BINARY_BG_NULL_STR}, "
-        f"giving {ROPE_WIDTH_STR} = 2{BINARY_SINGLE_MIN_EFFECT_STR}."
+        f"±{ROPE_HALF_WIDTH_STR} around {BINARY_BG_NULL_STR}, "
+        f"so {ROPE_WIDTH_STR} equals twice the value you enter below."
     )
 
     rope_width, precision_goal, all_ready, goal_too_wide = _steps_1_and_2(
@@ -532,9 +539,13 @@ def rope_advisor_dialog_binary_between_groups(
         presets=BETWEEN_GROUPS_DOMAIN_PRESETS,
         null_val=delta_null,
         null_label=BINARY_BG_NULL_STR,
-        effect_label=BINARY_SINGLE_MIN_EFFECT_STR,
+        effect_label=ROPE_HALF_WIDTH_STR,
         step1_caption="What's the smallest difference in proportions between groups your team would act on?",
         step1_learn_more=learn_more_bg,
+        step1_help=(
+            f"The ROPE spans ±{ROPE_HALF_WIDTH_STR} around {BINARY_BG_NULL_STR}. "
+            f"Enter this as a percentage — {ROPE_WIDTH_STR} will be twice this value."
+        ),
     )
 
     # ── Step 3 — Estimated sample size ────────────────────────────────────────
@@ -550,7 +561,7 @@ def rope_advisor_dialog_binary_between_groups(
         w_goal_max = float(rope_width)
 
         linked = st.checkbox(
-            f"🔗 Link p_B = p_A − δ₀ ({delta_null:+.2f})",
+            f"🔗 Link p_B = p_A − Δ₀ ({delta_null:+.2f})",
             value=True,
             key=f"{pfx}_link_p_b",
             help="When checked, moving p_A automatically updates p_B to maintain the null difference.",
