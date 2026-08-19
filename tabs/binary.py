@@ -30,7 +30,10 @@ from utils.tutorials import (
     NHST_LIMITATIONS, MATHS_BINARY_SINGLE_GROUP, MATHS_BINARY_BETWEEN_GROUPS,
     BAYES_FACTOR_INTRO, BAYES_FACTOR_INTERPRETATION,
 )
-from utils.rope_advisor import rope_advisor_dialog_binary_single
+from utils.rope_advisor import (
+    rope_advisor_dialog_binary_single,
+    rope_advisor_dialog_binary_between_groups,
+)
 from utils.constants import BINARY_SINGLE_PARAMETER_ESTIMATE_STR, GOAL_STR, HDI_WIDTH_STR, ROPE_WIDTH_STR, BINARY_SINGLE_NULL_STR
 from utils.forced_decision import (
     posterior_tail_probability, bayesian_expected_loss, FORCED_DECISION_REFERENCES,
@@ -125,13 +128,13 @@ def _sidebar_single_group() -> dict:
 
     # Flush values committed by the ROPE advisor dialog's on_click callback
     # before ROPE / precision widgets render so they pick up the new values.
-    if "_rope_advisor_result" in st.session_state:
-        _r = st.session_state.pop("_rope_advisor_result")
-        st.session_state["binary_rope_mode"] = _r["binary_rope_mode"]
-        st.session_state["binary_rope_width"] = _r["binary_rope_width"]
-        st.session_state["binary_precision_goal"] = _r["binary_precision_goal"]
-        if "binary_theta_null" in _r:
-            st.session_state["binary_theta_null"] = _r["binary_theta_null"]
+    if "_rope_advisor_sg_result" in st.session_state:
+        _r = st.session_state.pop("_rope_advisor_sg_result")
+        st.session_state["binary_rope_mode"] = _r["rope_mode"]
+        st.session_state["binary_rope_width"] = _r["rope_width"]
+        st.session_state["binary_precision_goal"] = _r["precision_goal"]
+        if "theta_null" in _r:
+            st.session_state["binary_theta_null"] = _r["theta_null"]
         st.session_state["_force_commit"] = True
 
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
@@ -642,6 +645,15 @@ def _sidebar_between_groups() -> dict:
     group_a = _sidebar_group_inputs(label_a, "bg_a")
     group_b = _sidebar_group_inputs(label_b, "bg_b")
 
+    # Flush values committed by the ROPE advisor dialog before ROPE / precision
+    # widgets render so they pick up the new values.
+    if "_rope_advisor_bg_result" in st.session_state:
+        _r = st.session_state.pop("_rope_advisor_bg_result")
+        st.session_state["bg_rope_mode"] = _r["rope_mode"]
+        st.session_state["bg_rope_width"] = _r["rope_width"]
+        st.session_state["bg_precision_goal"] = _r["precision_goal"]
+        st.session_state["_force_commit"] = True
+
     st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
 
     if "bg_theta_null" not in st.session_state:
@@ -688,6 +700,20 @@ def _sidebar_between_groups() -> dict:
         step=0.01, format="%.3f", key="bg_precision_goal",
         help="Must not exceed the ROPE width for the method to work.",
     )
+
+    p_a = group_a["successes"] / group_a["total"] if (group_a["total"] and group_a["successes"] is not None) else 0.5
+    p_b = group_b["successes"] / group_b["total"] if (group_b["total"] and group_b["successes"] is not None) else 0.5
+    if st.sidebar.button(
+        "🧭 Help me choose",
+        key="bg_rope_advisor_btn",
+        help="Answer 3 short questions to get recommended ROPE & precision-goal values.",
+        use_container_width=True,
+    ):
+        rope_advisor_dialog_binary_between_groups(
+            delta_null=theta_null,
+            p_a_default=p_a,
+            p_b_default=p_b,
+        )
 
     ci_fraction = CI_FRACTION
     decimal_places = 3

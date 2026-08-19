@@ -483,6 +483,36 @@ def estimate_n_goal_between_groups_continuous(
     )
 
 
+# TODO: unit tests
+def binomial_difference_ci_width_to_sample_size(p_a, p_b, r, omega, z_star=1.96):
+    """
+    Approximate total sample size for a given CI width on the difference p_A - p_B.
+
+    V_eff = p_A(1-p_A)/r + p_B(1-p_B)/(1-r)
+    N_total = 4 * z_star² * V_eff / omega²
+
+    Parameters
+    ----------
+    p_a : float
+        Expected proportion in group A.
+    p_b : float
+        Expected proportion in group B.
+    r : float
+        Group ratio n_A / (n_A + n_B), in (0, 1).
+    omega : float
+        Desired CI width (ω_goal).
+    z_star : float
+        Z critical value (default 1.96 for ~95%).
+
+    Returns
+    -------
+    float
+        Approximate total sample size N_total.
+    """
+    v_eff = p_a * (1 - p_a) / r + p_b * (1 - p_b) / (1 - r)
+    return 4 * z_star ** 2 * v_eff / omega ** 2
+
+
 def binomial_rate_ci_width_to_sample_size(p, credible_interval_width, z_star=1.96):
     """
     Approximate sample size needed for a given CI width (normal approximation).

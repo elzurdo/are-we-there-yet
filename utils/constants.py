@@ -41,3 +41,6 @@ BINARY_SINGLE_OBSERVE_STR = r"$\hat{\theta}$"
 
 BINARY_SINGLE_MIN_EFFECT_STR = r"$\delta\theta$"
 BINARY_SINGLE_MIN_EFFECT_STR_HTML = "δθ"
+
+BINARY_BG_NULL_STR = r"$\delta_0$"
+BINARY_BG_PARAMETER_ESTIMATE_STR = r"$\hat{\delta}$"
