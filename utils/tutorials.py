@@ -370,7 +370,7 @@ GLOSSARY_TABLE = """
     <tr>
       <td>ω<sub>HDI</sub></td>
       <td>HDI Width</td>
-      <td>Actual posterior width of the current sample. <br>Stopping requires ω<sub>HDI</sub> ≤ ω<sub>goal</sub>.</td>
+      <td>Actual posterior width of the current sample. <br>ω<sub>HDI</sub>= HDI<sub>max</sub> − HDI<sub>min</sub>. <br>Stopping requires ω<sub>HDI</sub> ≤ ω<sub>goal</sub>.</td>
     </tr>
   </tbody>
 </table>

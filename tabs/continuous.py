@@ -21,7 +21,8 @@ import numpy as np
 from scipy.stats import t as student_t
 
 from utils.stats import continuous_hdi_ci_limits, continuous_difference_hdi, continuous_overlap, CI_FRACTION, estimate_n_goal, estimate_n_goal_between_groups_continuous
-from utils.decision import epitg_decision
+from utils.constants import ROPE_MODE_HELP
+from utils.decision import dpitg_decision
 from utils.viz import plot_posterior_continuous, plot_posterior_difference, plot_nhst_posterior, plot_two_continuous_posteriors
 from utils.verdict import render_verdict_display
 from utils.nhst import nhst_test
@@ -95,7 +96,7 @@ def _sidebar_single_group() -> dict:
         key="cont_n",
     )
 
-    st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
+    st.sidebar.markdown("### 🎯 Hypothesis & Effect Size")
 
     theta_null = st.sidebar.number_input(
         "Null hypothesis (μ_null)", value=100.0, step=0.1,
@@ -107,6 +108,7 @@ def _sidebar_single_group() -> dict:
         ["Full width (symmetric)", "Explicit min / max"],
         horizontal=True,
         key="cont_rope_mode",
+        help=ROPE_MODE_HELP,
     )
 
     if rope_mode == "Full width (symmetric)":
@@ -240,7 +242,7 @@ def _render_single_group(inputs: dict):
         sample_mean, sample_std, n, ci_fraction=ci_fraction,
     )
 
-    result = epitg_decision(
+    result = dpitg_decision(
         hdi_min=hdi_min,
         hdi_max=hdi_max,
         rope_min=rope_min,
@@ -382,7 +384,7 @@ def _sidebar_between_groups() -> dict:
     group_a = _sidebar_group_inputs(label_a, "cont_bg_a")
     group_b = _sidebar_group_inputs(label_b, "cont_bg_b")
 
-    st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
+    st.sidebar.markdown("### 🎯 Hypothesis & Effect Size")
 
     theta_null = st.sidebar.number_input(
         "Null hypothesis (Δ₀ = μ_A − μ_B)", value=0.0, step=0.1,
@@ -394,6 +396,7 @@ def _sidebar_between_groups() -> dict:
         ["Full width (symmetric)", "Explicit min / max"],
         horizontal=True,
         key="cont_bg_rope_mode",
+        help=ROPE_MODE_HELP,
     )
 
     if rope_mode == "Full width (symmetric)":
@@ -500,7 +503,7 @@ def _render_between_groups(inputs: dict):
         mean_a, std_a, n_a, mean_b, std_b, n_b, ci_fraction=ci_fraction
     )
 
-    result = epitg_decision(
+    result = dpitg_decision(
         hdi_min=hdi_min,
         hdi_max=hdi_max,
         rope_min=rope_min,

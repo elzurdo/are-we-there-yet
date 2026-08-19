@@ -40,6 +40,12 @@ BINARY_SINGLE_NULL_STR_HTML = "&theta;<sub>null</sub>"
 BINARY_SINGLE_OBSERVE_STR = r"$\hat{\theta}$"
 
 
+ROPE_MODE_HELP = (
+    "ROPE = Region of Practical Equivalence. "
+    "Effects inside this band are considered practically equivalent to the null hypothesis. "
+    "Choose a symmetric ROPE around the null, or specify explicit min/max bounds."
+)
+
 BINARY_SINGLE_MIN_EFFECT_STR = r"$\delta\theta$"
 BINARY_SINGLE_MIN_EFFECT_STR_HTML = "δθ"
 

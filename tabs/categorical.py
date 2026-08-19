@@ -14,7 +14,8 @@ import streamlit as st
 import numpy as np
 
 from utils.stats import binary_difference_hdi, CI_FRACTION
-from utils.decision import epitg_decision, DECISION_DISPLAY
+from utils.constants import ROPE_MODE_HELP
+from utils.decision import dpitg_decision, DECISION_DISPLAY
 from utils.viz import plot_categorical_forest
 from utils.verdict import render_verdict_display
 
@@ -89,7 +90,7 @@ def sidebar_inputs() -> dict:
     else:
         reference_category = None
 
-    st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
+    st.sidebar.markdown("### 🎯 Hypothesis & Effect Size")
 
     theta_null = st.sidebar.number_input(
         "Null hypothesis (Δ₀)", min_value=-1.0, max_value=1.0,
@@ -102,6 +103,7 @@ def sidebar_inputs() -> dict:
         ["Full width (symmetric)", "Explicit min / max"],
         horizontal=True,
         key="cat_rope_mode",
+        help=ROPE_MODE_HELP
     )
 
     if rope_mode == "Full width (symmetric)":
@@ -243,7 +245,7 @@ def render_results(inputs: dict):
         )
 
         # Get ePitG decision
-        result = epitg_decision(
+        result = dpitg_decision(
             hdi_min=hdi_min,
             hdi_max=hdi_max,
             rope_min=rope_min,

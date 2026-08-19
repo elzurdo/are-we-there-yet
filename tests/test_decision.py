@@ -7,7 +7,7 @@ from utils.decision import (
     Decision,
     DecisionResult,
     _decide_location,
-    epitg_decision,
+    dpitg_decision,
 )
 
 # ── Shared ROPE / HDI helpers ─────────────────────────────────
@@ -27,7 +27,7 @@ def _make_result(**kwargs) -> DecisionResult:
         ci_fraction=0.95,
     )
     defaults.update(kwargs)
-    return epitg_decision(**defaults)
+    return dpitg_decision(**defaults)
 
 
 # ──────────────────────────────────────────────────────────────

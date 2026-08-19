@@ -15,7 +15,7 @@ from utils.stats import (
     check_clt_conditions, beta_overlap, CI_FRACTION, estimate_n_goal,
     estimate_n_goal_between_groups,
 )
-from utils.decision import epitg_decision
+from utils.decision import dpitg_decision
 from utils.viz import (
     plot_posterior_binary, plot_posterior_difference, plot_two_beta_posteriors,
     plot_nhst_posterior, plot_bayes_factor_prior_posterior,
@@ -34,7 +34,7 @@ from utils.rope_advisor import (
     rope_advisor_dialog_binary_single,
     rope_advisor_dialog_binary_between_groups,
 )
-from utils.constants import BINARY_SINGLE_PARAMETER_ESTIMATE_STR, GOAL_STR, HDI_WIDTH_STR, ROPE_WIDTH_STR, BINARY_SINGLE_NULL_STR
+from utils.constants import BINARY_SINGLE_PARAMETER_ESTIMATE_STR, GOAL_STR, HDI_WIDTH_STR, ROPE_MODE_HELP, ROPE_WIDTH_STR, BINARY_SINGLE_NULL_STR
 from utils.forced_decision import (
     posterior_tail_probability, bayesian_expected_loss, FORCED_DECISION_REFERENCES,
 )
@@ -137,7 +137,7 @@ def _sidebar_single_group() -> dict:
             st.session_state["binary_theta_null"] = _r["theta_null"]
         st.session_state["_force_commit"] = True
 
-    st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
+    st.sidebar.markdown("### 🎯 Hypothesis & Effect Size")
 
     if "binary_theta_null" not in st.session_state:
         st.session_state["binary_theta_null"] = 0.5
@@ -151,6 +151,7 @@ def _sidebar_single_group() -> dict:
         ["Full width (symmetric)", "Explicit min / max"],
         horizontal=True,
         key="binary_rope_mode",
+        help=ROPE_MODE_HELP
     )
 
     if rope_mode == "Full width (symmetric)":
@@ -307,7 +308,7 @@ def _render_single_group(inputs: dict):
 
     hdi_min, hdi_max = successes_failures_to_hdi_ci_limits(a, b, ci_fraction=ci_fraction)
 
-    result = epitg_decision(
+    result = dpitg_decision(
         hdi_min=hdi_min,
         hdi_max=hdi_max,
         rope_min=rope_min,
@@ -654,7 +655,7 @@ def _sidebar_between_groups() -> dict:
         st.session_state["bg_precision_goal"] = _r["precision_goal"]
         st.session_state["_force_commit"] = True
 
-    st.sidebar.markdown("### 🎯 Hypothesis & ROPE")
+    st.sidebar.markdown("### 🎯 Hypothesis & Effect Size")
 
     if "bg_theta_null" not in st.session_state:
         st.session_state["bg_theta_null"] = 0.0
@@ -668,6 +669,7 @@ def _sidebar_between_groups() -> dict:
         ["Full width (symmetric)", "Explicit min / max"],
         horizontal=True,
         key="bg_rope_mode",
+        help=ROPE_MODE_HELP
     )
 
     if rope_mode == "Full width (symmetric)":
@@ -842,7 +844,7 @@ def _render_between_groups(inputs: dict):
     # --- Compute ---
     hdi_min, hdi_max = binary_difference_hdi(p_a, n_a, p_b, n_b, ci_fraction=ci_fraction)
 
-    result = epitg_decision(
+    result = dpitg_decision(
         hdi_min=hdi_min,
         hdi_max=hdi_max,
         rope_min=rope_min,

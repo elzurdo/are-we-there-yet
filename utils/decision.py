@@ -97,7 +97,7 @@ def _decide_location(hdi_min: float, hdi_max: float,
     return Decision.INCONCLUSIVE
 
 
-def epitg_decision(
+def dpitg_decision(
     hdi_min: float,
     hdi_max: float,
     rope_min: float,
