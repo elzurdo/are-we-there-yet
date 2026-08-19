@@ -6,7 +6,10 @@ import numpy as np
 from scipy.stats import beta, t as student_t
 
 from utils.decision import DecisionResult, DECISION_DISPLAY
-from utils.stats import binomial_rate_ci_width_to_sample_size
+from utils.stats import (
+    binomial_rate_ci_width_to_sample_size,
+    binomial_difference_ci_width_to_sample_size,
+)
 
 
 def plot_posterior_binary(result: DecisionResult, successes: float, failures: float,
@@ -718,6 +721,71 @@ def plot_n_goal_by_parameter(
     ax.set_title(
         r"Minimum $N_{\rm goal}$ to Achieve Precision Goal",
         fontsize=14,
+    )
+    ax.set_yticks([])
+    fig.tight_layout()
+    return fig
+
+
+def plot_n_goal_by_parameter_between_groups(
+    omega_goal=None,
+    p_a_highlight=None,
+    p_b_fixed=0.5,
+    r=0.5,
+    z_star=1.96,
+    w_goal_min=0.04,
+    w_goal_max=0.10,
+    n_background_curves=7,
+):
+    """
+    Plot N_total_goal vs p_A (sweeping 0.01–0.99) for fixed p_B and group ratio r.
+
+    Mirrors plot_n_goal_by_parameter for the between-groups setting.
+    Background band spans w_goal_min to w_goal_max; highlighted point at p_a_highlight.
+    """
+    p_as = np.arange(0.01, 0.99, 0.01)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    bg_goals = np.linspace(w_goal_min, w_goal_max, n_background_curves)
+    for goal in bg_goals:
+        n_vals = [binomial_difference_ci_width_to_sample_size(p_a, p_b_fixed, r, goal, z_star=z_star)
+                  for p_a in p_as]
+        ax.plot(p_as, n_vals, color="gray", alpha=0.15, linewidth=1)
+
+    if w_goal_min < w_goal_max:
+        n_top = [binomial_difference_ci_width_to_sample_size(p_a, p_b_fixed, r, w_goal_min, z_star=z_star)
+                 for p_a in p_as]
+        n_bot = [binomial_difference_ci_width_to_sample_size(p_a, p_b_fixed, r, w_goal_max, z_star=z_star)
+                 for p_a in p_as]
+        ax.fill_between(p_as, n_bot, n_top, alpha=0.06, color="gray")
+        ax.text(0.05, max(n_top) * 0.92, f"ω = {w_goal_min:.3f}–{w_goal_max:.3f}",
+                fontsize=8, color="gray", alpha=0.6)
+
+    if omega_goal is not None:
+        n_user = [binomial_difference_ci_width_to_sample_size(p_a, p_b_fixed, r, omega_goal, z_star=z_star)
+                  for p_a in p_as]
+        ax.plot(p_as, n_user, color="steelblue", linewidth=2.5,
+                label=f"ω_goal = {omega_goal:.4f}", zorder=3)
+
+        if p_a_highlight is not None:
+            n_at_p_a = binomial_difference_ci_width_to_sample_size(
+                p_a_highlight, p_b_fixed, r, omega_goal, z_star=z_star,
+            )
+            ax.plot(p_a_highlight, n_at_p_a, "o", color="darkred",
+                    markersize=10, zorder=5,
+                    label=f"N_total ≈ {max(1, int(n_at_p_a)):,} at p_A = {p_a_highlight:.2f}")
+
+    ax.axvline(x=p_b_fixed, color="orange", linestyle="--", alpha=0.5, linewidth=1.5,
+               label=f"p_B = {p_b_fixed:.2f} (fixed)")
+
+    ax.legend(fontsize=9)
+    ax.grid(alpha=0.3)
+    ax.set_xlabel(r"$p_A$ (expected rate, Group A)", fontsize=12)
+    ax.set_ylabel(r"$N_{\rm total,\, goal}$", fontsize=12)
+    ax.set_title(
+        rf"Minimum $N_{{total}}$ to Achieve Precision Goal  ($p_B={p_b_fixed:.2f}$, $r={r:.2f}$)",
+        fontsize=13,
     )
     ax.set_yticks([])
     fig.tight_layout()

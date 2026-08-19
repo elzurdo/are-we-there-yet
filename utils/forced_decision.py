@@ -1,8 +1,8 @@
 """
 Forced-decision methods for when the DPitG stopping criterion is not met.
 
-7a: Posterior Tail Probability (Probability of Direction)
-7b: Bayesian Expected Loss (Optimal Bayes Action)
+Posterior Tail Probability (Probability of Direction)
+Bayesian Expected Loss (Optimal Bayes Action)
 
 Applied to the Beta posterior for single-group binary data.
 """

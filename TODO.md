@@ -93,7 +93,14 @@ writes before widget instantiation).
 **Follow-ups:**
 
 ### 6a. Apply the same advisor pattern to the other three cases
-- Binary between-groups
+- ✅ Binary between-groups — `rope_advisor_dialog_binary_between_groups()` in `utils/rope_advisor.py`.
+  Steps 1–2 shared via `_steps_1_and_2()` helper; Step 3 has p_A, p_B, ω_goal sliders
+  with optional p_B linking; `BETWEEN_GROUPS_DOMAIN_PRESETS` with 4 domains.
+  Supporting additions: `binomial_difference_ci_width_to_sample_size()` in `utils/stats.py`,
+  `plot_n_goal_by_parameter_between_groups()` in `utils/viz.py`,
+  `BINARY_BG_NULL_STR` / `BINARY_BG_PARAMETER_ESTIMATE_STR` in `utils/constants.py`.
+  Session state namespaced: `_advisor_sg_*` / `_advisor_bg_*`, result keys
+  `_rope_advisor_sg_result` / `_rope_advisor_bg_result`.
 - Continuous single-group
 - Continuous between-groups
 
