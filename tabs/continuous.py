@@ -21,7 +21,7 @@ import numpy as np
 from scipy.stats import t as student_t
 
 from utils.stats import continuous_hdi_ci_limits, continuous_difference_hdi, continuous_overlap, CI_FRACTION, estimate_n_goal, estimate_n_goal_between_groups_continuous
-from utils.constants import ROPE_MODE_HELP
+from utils.constants import ROPE_MODE_HELP, GOAL_STR, XBAR_STR, xbar_label, s_label
 from utils.decision import dpitg_decision
 from utils.viz import plot_posterior_continuous, plot_posterior_difference, plot_nhst_posterior, plot_two_continuous_posteriors
 from utils.verdict import render_verdict_display
@@ -83,6 +83,7 @@ def _sidebar_single_group() -> dict:
 
     st.sidebar.markdown("### 📊 Data")
 
+    # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
     sample_mean = st.sidebar.number_input(
         "Sample mean (x̄)", value=None, step=0.1,
         format="%.4f", key="cont_mean",
@@ -98,6 +99,7 @@ def _sidebar_single_group() -> dict:
 
     st.sidebar.markdown("### 🎯 Hypothesis & Effect Size")
 
+    # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
     theta_null = st.sidebar.number_input(
         "Null hypothesis (μ_null)", value=100.0, step=0.1,
         format="%.4f", key="cont_theta_null",
@@ -112,6 +114,7 @@ def _sidebar_single_group() -> dict:
     )
 
     if rope_mode == "Full width (symmetric)":
+        # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
         rope_width = st.sidebar.number_input(
             "ROPE width (ω_ROPE)", min_value=0.001,
             value=10.0, step=0.1, format="%.3f", key="cont_rope_width",
@@ -221,7 +224,7 @@ def _render_single_group(inputs: dict):
     with col_s1:
         st.markdown(
             f"**Data**  \n"
-            f"x̄ = {sample_mean:{fmt}}  \n"
+            f"{XBAR_STR} = {sample_mean:{fmt}}  \n"
             f"s = {sample_std:{fmt}}, n = {n}"
         )
     with col_s2:
@@ -261,7 +264,7 @@ def _render_single_group(inputs: dict):
         variance = sample_std ** 2
         n_goal, n_additional = estimate_n_goal(variance, precision_goal, n, ci_fraction)
         st.info(
-             f"📏 To achieve precision goal ω_goal={precision_goal:{fmt}}, based on the current sample standard deviation s={sample_std:{fmt}}: \n"
+            f"📏 To achieve precision goal {GOAL_STR}={precision_goal:{fmt}}, based on the current sample standard deviation s={sample_std:{fmt}}: \n"
             f"You have sampled **{n:,}** data points.  \n"
             f"**{n_goal:,}** samples are recommended."
             f"That leaves at least **~{n_additional:,}** additional samples to collect."
@@ -350,6 +353,7 @@ def _sidebar_group_inputs(label: str, key_prefix: str) -> dict:
 
     st.sidebar.markdown(f"#### {label}")
 
+    # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
     sample_mean = st.sidebar.number_input(
         "Sample mean (x̄)", value=None, step=0.1,
         format="%.4f", key=f"{key_prefix}_mean",
@@ -386,6 +390,7 @@ def _sidebar_between_groups() -> dict:
 
     st.sidebar.markdown("### 🎯 Hypothesis & Effect Size")
 
+    # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
     theta_null = st.sidebar.number_input(
         "Null hypothesis (Δ₀ = μ_A − μ_B)", value=0.0, step=0.1,
         format="%.4f", key="cont_bg_theta_null",
@@ -400,6 +405,7 @@ def _sidebar_between_groups() -> dict:
     )
 
     if rope_mode == "Full width (symmetric)":
+        # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
         rope_width = st.sidebar.number_input(
             "ROPE width (ω_ROPE)", min_value=0.001,
             value=5.0, step=0.1, format="%.3f", key="cont_bg_rope_width",
@@ -520,13 +526,13 @@ def _render_between_groups(inputs: dict):
     with col_a:
         st.markdown(
             f"**{label_a}**  \n"
-            f"x̄ = {mean_a:{fmt}}, s = {std_a:{fmt}}  \n"
+            f"{XBAR_STR} = {mean_a:{fmt}}, s = {std_a:{fmt}}  \n"
             f"n = {n_a}"
         )
     with col_b:
         st.markdown(
             f"**{label_b}**  \n"
-            f"x̄ = {mean_b:{fmt}}, s = {std_b:{fmt}}  \n"
+            f"{XBAR_STR} = {mean_b:{fmt}}, s = {std_b:{fmt}}  \n"
             f"n = {n_b}"
         )
 
@@ -534,7 +540,7 @@ def _render_between_groups(inputs: dict):
     with col_s1:
         st.markdown(
             f"**Difference (δ)**  \n"
-            f"x̄_{label_a} − x̄_{label_b} = {delta:{fmt}}  \n"
+            f"{xbar_label(label_a)} − {xbar_label(label_b)} = {delta:{fmt}}  \n"
             f"SE = {se:{fmt}}, ν = {df:.1f}"
         )
     with col_s2:
@@ -560,8 +566,8 @@ def _render_between_groups(inputs: dict):
             std_a, n_a, std_b, n_b, precision_goal, ci_fraction
         )
         st.info(
-            f"📏 To achieve precision goal ω_goal={precision_goal:{fmt}}, based on the current sample standard deviations "
-            f"s_{label_a}={std_a:{fmt}}, s_{label_b}={std_b:{fmt}} (preserving the current {n_a}/{n_b} group ratio):  \n"
+            f"📏 To achieve precision goal {GOAL_STR}={precision_goal:{fmt}}, based on the current sample standard deviations "
+            f"{s_label(label_a)}={std_a:{fmt}}, {s_label(label_b)}={std_b:{fmt}} (preserving the current {n_a}/{n_b} group ratio):  \n"
             f"**{label_a}**: You have sampled {n_a:,} data points. ~{n_a_goal:,} total are recommended. "
             f"That leaves at least ~{n_a_add:,} additional samples to collect.  \n"
             f"**{label_b}**: You have sampled {n_b:,} data points. ~{n_b_goal:,} total are recommended. "

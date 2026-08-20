@@ -27,6 +27,8 @@ from utils.constants import (
     ROPE_WIDTH_STR,
     ROPE_HALF_WIDTH_STR,
     BINARY_SINGLE_OBSERVE_STR,
+    theta_label,
+    theta_hat_label,
 )
 from utils.stats import (
     binomial_rate_ci_width_to_sample_size,
@@ -375,6 +377,7 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
 
         col_theta, col_omega = st.columns(2)
         with col_theta:
+            # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
             explore_theta = st.slider(
                 "θ (expected rate)",
                 min_value=0.01,
@@ -387,6 +390,7 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
         with col_omega:
             w_goal_min = 0.5 * float(rope_width)
             w_goal_max = float(rope_width)
+            # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
             explore_omega = st.slider(
                 "ω_goal (precision)",
                 min_value=w_goal_min,
@@ -465,9 +469,9 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
 
         if step3_ever_touched:
             theta_note = (
-                f"θ_null updated to **{explore_theta:.2f}** (was {theta_null:.2f})"
+                f"{BINARY_SINGLE_NULL_STR} updated to **{explore_theta:.2f}** (was {theta_null:.2f})"
                 if theta_changed
-                else f"θ_null remains the same at **{theta_null:.2f}**"
+                else f"{BINARY_SINGLE_NULL_STR} remains the same at **{theta_null:.2f}**"
             )
             omega_note = (
                 f"{GOAL_STR} updated to **{explore_omega:.4f}** "
@@ -506,6 +510,8 @@ def rope_advisor_dialog_binary_between_groups(
     delta_null: float = 0.0,
     p_a_default: float = 0.5,
     p_b_default: float = 0.5,
+    label_a: str = "A",
+    label_b: str = "B",
 ) -> None:
     """Interactive 3-step guide for binary between-groups ROPE & precision goal.
 
@@ -515,11 +521,15 @@ def rope_advisor_dialog_binary_between_groups(
     Parameters
     ----------
     delta_null : float
-        Current null hypothesis for the difference (Δ₀ = p_A − p_B).
+        Current null hypothesis for the difference (Δ₀ = θ_A − θ_B).
     p_a_default : float
-        Expected rate for Group A — pre-populates the Step 3 p_A slider.
+        Expected rate for Group A — pre-populates the Step 3 θ_A slider.
     p_b_default : float
-        Expected rate for Group B — pre-populates the Step 3 p_B slider.
+        Expected rate for Group B — pre-populates the Step 3 θ_B slider.
+    label_a : str
+        Display name for Group A (e.g. "Control").
+    label_b : str
+        Display name for Group B (e.g. "Treatment").
     """
     if "_rope_advisor_bg_result" in st.session_state:
         st.rerun(scope="app")
@@ -527,8 +537,9 @@ def rope_advisor_dialog_binary_between_groups(
     pfx = "_advisor_bg"
 
     learn_more_bg = (
-        f"If Group A's rate is p_A = 0.50 and Group B's is p_B = 0.52, "
-        f"the difference Δ = p_A − p_B = −0.02 — a 2 pp effect.  \n"
+        f"If {label_a}'s rate is {theta_hat_label(label_a)} = 0.50 "
+        f"and {label_b}'s is {theta_hat_label(label_b)} = 0.52, "
+        f"the difference Δ = {theta_hat_label(label_a)} − {theta_hat_label(label_b)} = −0.02 — a 2 pp effect.  \n"
         f"The **ROPE** (Region of Practical Equivalence) spans "
         f"±{ROPE_HALF_WIDTH_STR} around {BINARY_BG_NULL_STR}, "
         f"so {ROPE_WIDTH_STR} equals twice the value you enter below."
@@ -553,24 +564,26 @@ def rope_advisor_dialog_binary_between_groups(
         st.divider()
         st.markdown("#### Step 3 — Estimated Sample Size")
         st.caption(
-            "How many observations per group would you need? "
-            "Adjust p_A, p_B, and ω below to explore."
+            f"How many observations per group would you need? "
+            f"Adjust {theta_label(label_a)}, {theta_label(label_b)}, and {GOAL_STR} below to explore."
         )
 
         w_goal_min = 0.5 * float(rope_width)
         w_goal_max = float(rope_width)
 
+        # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
         linked = st.checkbox(
-            f"🔗 Link p_B = p_A − Δ₀ ({delta_null:+.2f})",
+            f"🔗 Link θ_{label_b} = θ_{label_a} − Δ₀ ({delta_null:+.2f})",
             value=True,
             key=f"{pfx}_link_p_b",
-            help="When checked, moving p_A automatically updates p_B to maintain the null difference.",
+            help="When checked, moving θ_A automatically updates θ_B to maintain the null difference.",
         )
 
         col_pa, col_pb, col_omega = st.columns(3)
         with col_pa:
+            # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
             explore_p_a = st.slider(
-                "p_A (expected rate, Group A)",
+                f"θ_{label_a} (expected rate)",
                 min_value=0.01,
                 max_value=0.99,
                 value=float(p_a_default),
@@ -581,8 +594,9 @@ def rope_advisor_dialog_binary_between_groups(
                 kwargs={"advisor_prefix": pfx, "delta_null": delta_null} if linked else None,
             )
         with col_pb:
+            # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
             explore_p_b = st.slider(
-                "p_B (expected rate, Group B)",
+                f"θ_{label_b} (expected rate)",
                 min_value=0.01,
                 max_value=0.99,
                 value=float(p_b_default),
@@ -592,6 +606,7 @@ def rope_advisor_dialog_binary_between_groups(
                 disabled=linked,
             )
         with col_omega:
+            # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
             explore_omega = st.slider(
                 "ω_goal (precision)",
                 min_value=w_goal_min,
@@ -656,9 +671,11 @@ def rope_advisor_dialog_binary_between_groups(
 
         col_na, col_nb = st.columns(2)
         with col_na:
-            st.metric(label="N_A goal", value=f"{n_a_goal:,}")
+            # Streamlit metric labels do not render LaTeX; using Unicode/ASCII notation
+            st.metric(label=f"N_{label_a} goal", value=f"{n_a_goal:,}")
         with col_nb:
-            st.metric(label="N_B goal", value=f"{n_b_goal:,}")
+            # Streamlit metric labels do not render LaTeX; using Unicode/ASCII notation
+            st.metric(label=f"N_{label_b} goal", value=f"{n_b_goal:,}")
 
         fig = plot_n_goal_by_parameter_between_groups(
             omega_goal=explore_omega,
@@ -668,6 +685,8 @@ def rope_advisor_dialog_binary_between_groups(
             z_star=z_star,
             w_goal_min=st.session_state.get(f"{pfx}_w_min", w_goal_min),
             w_goal_max=st.session_state.get(f"{pfx}_w_max", w_goal_max),
+            label_a=label_a,
+            label_b=label_b,
         )
         st.pyplot(fig)
 

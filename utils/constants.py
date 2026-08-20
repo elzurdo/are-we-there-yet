@@ -24,6 +24,10 @@ PREPRINT_BIBTEX = f"""@misc{{{PREPRINT_AUTHOR_SHORT.lower()}{PREPRINT_YEAR}dpitg
 GOAL_STR = r"$\omega_{\rm goal}$"
 HDI_WIDTH_STR = r"$\omega_{\rm HDI}$"
 
+N_GOAL_STR = r"$N_{\rm goal}$"
+N_TOTAL_STR = r"$N_{\rm total}$"
+N_TOTAL_GOAL_STR = r"$N_{\rm total,\, goal}$"
+
 # HTML-safe equivalents for use inside raw HTML blocks (unsafe_allow_html=True)
 GOAL_STR_HTML = "ω<sub>goal</sub>"
 HDI_WIDTH_STR_HTML = "ω<sub>HDI</sub>"
@@ -51,3 +55,32 @@ BINARY_SINGLE_MIN_EFFECT_STR_HTML = "δθ"
 
 BINARY_BG_NULL_STR = r"$\Delta_0$"
 BINARY_BG_PARAMETER_ESTIMATE_STR = r"$\hat{\Delta}$"
+
+# Continuous null hypothesis
+CONTINUOUS_NULL_STR = r"$\mu_{\rm null}$"
+CONTINUOUS_BG_NULL_STR = r"$\Delta_0$"
+
+# x-bar constant for use in markdown/info contexts
+XBAR_STR = r"$\bar{x}$"
+
+
+# Helper functions for dynamic LaTeX labels (use in markdown/info/warning contexts)
+def theta_label(subscript: str) -> str:
+    """LaTeX θ with a roman subscript: theta_label('A') → '$\\theta_{\\rm A}$'"""
+    return r"$\theta_{\rm " + subscript + r"}$"
+
+def theta_hat_label(subscript: str) -> str:
+    """LaTeX θ̂ with a roman subscript."""
+    return r"$\hat{\theta}_{\rm " + subscript + r"}$"
+
+def mu_label(subscript: str) -> str:
+    """LaTeX μ with a roman subscript."""
+    return r"$\mu_{\rm " + subscript + r"}$"
+
+def xbar_label(subscript: str) -> str:
+    """LaTeX x̄ with a roman subscript."""
+    return r"$\bar{x}_{\rm " + subscript + r"}$"
+
+def s_label(subscript: str) -> str:
+    """LaTeX s with a roman subscript."""
+    return r"$s_{\rm " + subscript + r"}$"

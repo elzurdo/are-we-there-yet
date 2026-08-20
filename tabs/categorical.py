@@ -92,6 +92,7 @@ def sidebar_inputs() -> dict:
 
     st.sidebar.markdown("### 🎯 Hypothesis & Effect Size")
 
+    # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
     theta_null = st.sidebar.number_input(
         "Null hypothesis (Δ₀)", min_value=-1.0, max_value=1.0,
         value=0.0, step=0.01, format="%.4f", key="cat_theta_null",
@@ -107,6 +108,7 @@ def sidebar_inputs() -> dict:
     )
 
     if rope_mode == "Full width (symmetric)":
+        # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
         rope_width = st.sidebar.number_input(
             "ROPE width (ω_ROPE)", min_value=0.001, max_value=2.0,
             value=0.10, step=0.01, format="%.3f", key="cat_rope_width",
@@ -325,7 +327,7 @@ def render_results(inputs: dict):
 **Approach:**
 - Each non-reference category is compared independently to the reference category
 - Uses binary proportion difference with CLT Normal approximation
-- HDI computed for each difference: δᵢ = p_i - p_ref
+- HDI computed for each difference: δᵢ = $\theta_i$ - $\theta_{\rm ref}$
 
 **Interpretation:**
 - **Positive δ**: Category has higher proportion than reference

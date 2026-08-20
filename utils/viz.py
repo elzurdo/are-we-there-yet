@@ -10,6 +10,7 @@ from utils.stats import (
     binomial_rate_ci_width_to_sample_size,
     binomial_difference_ci_width_to_sample_size,
 )
+from utils.constants import GOAL_STR, N_GOAL_STR, N_TOTAL_STR, N_TOTAL_GOAL_STR, theta_hat_label
 
 
 def plot_posterior_binary(result: DecisionResult, successes: float, failures: float,
@@ -704,7 +705,7 @@ def plot_n_goal_by_parameter(
         n_user = [binomial_rate_ci_width_to_sample_size(theta, omega_goal, z_star=z_star)
                   for theta in thetas]
         ax.plot(thetas, n_user, color="steelblue", linewidth=2.5,
-                label=f"ω_goal = {omega_goal:.4f}", zorder=3)
+                label=f"{GOAL_STR} = {omega_goal:.4f}", zorder=3)
 
         if theta_highlight is not None:
             n_at_theta = binomial_rate_ci_width_to_sample_size(
@@ -712,7 +713,7 @@ def plot_n_goal_by_parameter(
             )
             ax.plot(theta_highlight, n_at_theta, "o", color="darkred",
                     markersize=10, zorder=5,
-                    label=f"N_goal ≈ {max(1, int(n_at_theta)):,} at θ = {theta_highlight:.2f}")
+                    label=f"{N_GOAL_STR} ≈ {max(1, int(n_at_theta)):,} at $\\theta$ = {theta_highlight:.2f}")
 
     ax.legend(fontsize=9)
     ax.grid(alpha=0.3)
@@ -736,9 +737,11 @@ def plot_n_goal_by_parameter_between_groups(
     w_goal_min=0.04,
     w_goal_max=0.10,
     n_background_curves=7,
+    label_a: str = "A",
+    label_b: str = "B",
 ):
     """
-    Plot N_total_goal vs p_A (sweeping 0.01–0.99) for fixed p_B and group ratio r.
+    Plot N_total_goal vs θ_A (sweeping 0.01–0.99) for fixed θ_B and group ratio r.
 
     Mirrors plot_n_goal_by_parameter for the between-groups setting.
     Background band spans w_goal_min to w_goal_max; highlighted point at p_a_highlight.
@@ -766,7 +769,7 @@ def plot_n_goal_by_parameter_between_groups(
         n_user = [binomial_difference_ci_width_to_sample_size(p_a, p_b_fixed, r, omega_goal, z_star=z_star)
                   for p_a in p_as]
         ax.plot(p_as, n_user, color="steelblue", linewidth=2.5,
-                label=f"ω_goal = {omega_goal:.4f}", zorder=3)
+                label=f"{GOAL_STR} = {omega_goal:.4f}", zorder=3)
 
         if p_a_highlight is not None:
             n_at_p_a = binomial_difference_ci_width_to_sample_size(
@@ -774,17 +777,17 @@ def plot_n_goal_by_parameter_between_groups(
             )
             ax.plot(p_a_highlight, n_at_p_a, "o", color="darkred",
                     markersize=10, zorder=5,
-                    label=f"N_total ≈ {max(1, int(n_at_p_a)):,} at p_A = {p_a_highlight:.2f}")
+                    label=f"{N_TOTAL_STR} ≈ {max(1, int(n_at_p_a)):,} at {theta_hat_label(label_a)} = {p_a_highlight:.2f}")
 
     ax.axvline(x=p_b_fixed, color="orange", linestyle="--", alpha=0.5, linewidth=1.5,
-               label=f"p_B = {p_b_fixed:.2f} (fixed)")
+               label=f"{theta_hat_label(label_b)} = {p_b_fixed:.2f} (fixed)")
 
     ax.legend(fontsize=9)
     ax.grid(alpha=0.3)
-    ax.set_xlabel(r"$p_A$ (expected rate, Group A)", fontsize=12)
-    ax.set_ylabel(r"$N_{\rm total,\, goal}$", fontsize=12)
+    ax.set_xlabel(f"{theta_hat_label(label_a)} (expected rate, {label_a})", fontsize=12)
+    ax.set_ylabel(N_TOTAL_GOAL_STR, fontsize=12)
     ax.set_title(
-        rf"Minimum $N_{{total}}$ to Achieve Precision Goal  ($p_B={p_b_fixed:.2f}$, $r={r:.2f}$)",
+        f"Minimum {N_TOTAL_STR} to Achieve Precision Goal  ({theta_hat_label(label_b)}={p_b_fixed:.2f}, $r$={r:.2f})",
         fontsize=13,
     )
     ax.set_yticks([])

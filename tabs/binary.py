@@ -34,7 +34,7 @@ from utils.rope_advisor import (
     rope_advisor_dialog_binary_single,
     rope_advisor_dialog_binary_between_groups,
 )
-from utils.constants import BINARY_SINGLE_PARAMETER_ESTIMATE_STR, GOAL_STR, HDI_WIDTH_STR, ROPE_MODE_HELP, ROPE_WIDTH_STR, BINARY_SINGLE_NULL_STR
+from utils.constants import BINARY_SINGLE_PARAMETER_ESTIMATE_STR, GOAL_STR, HDI_WIDTH_STR, ROPE_MODE_HELP, ROPE_WIDTH_STR, BINARY_SINGLE_NULL_STR, BINARY_BG_NULL_STR, theta_label, theta_hat_label
 from utils.forced_decision import (
     posterior_tail_probability, bayesian_expected_loss, FORCED_DECISION_REFERENCES,
 )
@@ -155,6 +155,7 @@ def _sidebar_single_group() -> dict:
     )
 
     if rope_mode == "Full width (symmetric)":
+        # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
         rope_width = st.sidebar.number_input(
             rf"ROPE width {ROPE_WIDTH_STR}", min_value=0.001, max_value=1.0,
             value=None, step=0.01, format="%.3f", key="binary_rope_width",
@@ -327,7 +328,8 @@ def _render_single_group(inputs: dict):
         variance = observed_rate * (1 - observed_rate)
         n_goal, n_additional = estimate_n_goal(variance, precision_goal, total, ci_fraction)
         st.info(
-            f"📏 To achieve precision goal ω_goal={precision_goal:{fmt}}, based on the current observed rate θ̂={observed_rate:{fmt}}:  \n"
+            f"📏 To achieve precision goal {GOAL_STR}={precision_goal:{fmt}}, "
+            f"based on the current observed rate {BINARY_SINGLE_PARAMETER_ESTIMATE_STR}={observed_rate:{fmt}}:  \n"
             f"You have sampled **{total:,}** data points.  \n"
             f"~**{n_goal:,}** samples are recommended.  \n"
             f"That leaves at least **~{n_additional:,}** additional samples to collect."
@@ -457,7 +459,7 @@ def _render_single_group_peek(result, inputs, observed_rate, a, b):
                 st.metric("Interpretation", f"{emoji} {category}")
 
             bf01 = 1 / bf10
-            st.caption(f"BF₀₁ (evidence for H₀) = {bf01:.3f}")
+            st.caption(f"BF₀₁ (evidence for $H_0$) = {bf01:.3f}")
 
             st.markdown(BAYES_FACTOR_INTERPRETATION)
 
@@ -500,16 +502,18 @@ def _render_forced_decision_single(result, inputs, observed_rate, successes, fai
     prob, direction = posterior_tail_probability(successes, failures, theta_null, observed_rate)
 
     if direction == "above":
+        # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
         prob_label = "P(θ > θ_null | data)"
         dir_caption = (
-            f"Observed rate ({observed_rate:{fmt}}) ≥ θ_null ({theta_null:{fmt}}) "
-            f"→ reporting P(θ > θ_null | data)"
+            f"Observed rate ({observed_rate:{fmt}}) ≥ {BINARY_SINGLE_NULL_STR} ({theta_null:{fmt}}) "
+            f"→ reporting P(θ > {BINARY_SINGLE_NULL_STR} | data)"
         )
     else:
+        # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
         prob_label = "P(θ < θ_null | data)"
         dir_caption = (
-            f"Observed rate ({observed_rate:{fmt}}) < θ_null ({theta_null:{fmt}}) "
-            f"→ reporting P(θ < θ_null | data)"
+            f"Observed rate ({observed_rate:{fmt}}) < {BINARY_SINGLE_NULL_STR} ({theta_null:{fmt}}) "
+            f"→ reporting P(θ < {BINARY_SINGLE_NULL_STR} | data)"
         )
 
     st.caption(dir_caption)
@@ -526,7 +530,7 @@ def _render_forced_decision_single(result, inputs, observed_rate, successes, fai
 
     if prob >= threshold:
         st.warning(
-            f"⚠️ **Forced Decision: Reject θ_null** — "
+            f"⚠️ **Forced Decision: Reject {BINARY_SINGLE_NULL_STR}** — "
             f"effect is {direction} null with {prob:.1%} posterior probability "
             f"(threshold {threshold:.2f} met)."
         )
@@ -564,12 +568,12 @@ def _render_forced_decision_single(result, inputs, observed_rate, successes, fai
 
         if forced_accept:
             st.warning(
-                f"⚠️ **Forced Decision: Accept θ_null** — "
+                f"⚠️ **Forced Decision: Accept {BINARY_SINGLE_NULL_STR}** — "
                 f"expected loss favors Accept (EL={el_accept:.4f} < EL={el_reject:.4f})."
             )
         else:
             st.warning(
-                f"⚠️ **Forced Decision: Reject θ_null** — "
+                f"⚠️ **Forced Decision: Reject {BINARY_SINGLE_NULL_STR}** — "
                 f"expected loss favors Reject (EL={el_reject:.4f} < EL={el_accept:.4f})."
             )
 
@@ -659,8 +663,9 @@ def _sidebar_between_groups() -> dict:
 
     if "bg_theta_null" not in st.session_state:
         st.session_state["bg_theta_null"] = 0.0
+    # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
     theta_null = st.sidebar.number_input(
-        "Null hypothesis (Δ₀ = p_A − p_B)", min_value=-1.0, max_value=1.0,
+        "Null hypothesis (Δ₀ = θ_A − θ_B)", min_value=-1.0, max_value=1.0,
         step=0.01, format="%.4f", key="bg_theta_null",
     )
 
@@ -675,6 +680,7 @@ def _sidebar_between_groups() -> dict:
     if rope_mode == "Full width (symmetric)":
         if "bg_rope_width" not in st.session_state:
             st.session_state["bg_rope_width"] = 0.10
+        # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
         rope_width = st.sidebar.number_input(
             "ROPE width (ω_ROPE)", min_value=0.001, max_value=2.0,
             step=0.01, format="%.3f", key="bg_rope_width",
@@ -715,6 +721,8 @@ def _sidebar_between_groups() -> dict:
             delta_null=theta_null,
             p_a_default=p_a,
             p_b_default=p_b,
+            label_a=label_a,
+            label_b=label_b,
         )
 
     ci_fraction = CI_FRACTION
@@ -825,7 +833,7 @@ def _render_between_groups(inputs: dict):
     with col_s1:
         st.markdown(
             f"**Difference (δ)**  \n"
-            f"p̂_{label_a} − p̂_{label_b} = {delta:{fmt}}  \n"
+            f"{theta_hat_label(label_a)} − {theta_hat_label(label_b)} = {delta:{fmt}}  \n"
             f"SE = {se:{fmt}}"
         )
     with col_s2:
@@ -864,8 +872,8 @@ def _render_between_groups(inputs: dict):
             p_a, n_a, p_b, n_b, precision_goal, ci_fraction
         )
         st.info(
-            f"📏 To achieve precision goal ω_goal={precision_goal:{fmt}}, based on the current observed rates "
-            f"θ̂_{label_a}={p_a:{fmt}}, θ̂_{label_b}={p_b:{fmt}} (preserving the current {n_a}/{n_b} group ratio):  \n"
+            f"📏 To achieve precision goal {GOAL_STR}={precision_goal:{fmt}}, based on the current observed rates "
+            f"{theta_hat_label(label_a)}={p_a:{fmt}}, {theta_hat_label(label_b)}={p_b:{fmt}} (preserving the current {n_a}/{n_b} group ratio):  \n"
             f"**{label_a}**: You have sampled {n_a:,} data points. ~{n_a_goal:,} total are recommended. "
             f"That leaves at least ~{n_a_add:,} additional samples to collect.  \n"
             f"**{label_b}**: You have sampled {n_b:,} data points. ~{n_b_goal:,} total are recommended. "
