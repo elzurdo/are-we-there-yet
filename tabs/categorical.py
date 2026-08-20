@@ -18,6 +18,11 @@ from utils.constants import ROPE_MODE_HELP
 from utils.decision import dpitg_decision, DECISION_DISPLAY
 from utils.viz import plot_categorical_forest
 from utils.verdict import render_verdict_display
+from utils.bayes_factor import (
+    binary_single_group_bayes_factor, PRIOR_SPECS,
+    interpret_bayes_factor_jeffreys, interpret_bayes_factor_kass_raftery,
+)
+from utils.tutorials import BAYES_FACTOR_INTRO_CATEGORICAL, BAYES_FACTOR_INTERPRETATION
 
 
 def get_example_values() -> dict:
@@ -299,10 +304,40 @@ def render_results(inputs: dict):
     st.divider()
     st.markdown("### 📋 Individual Comparisons")
 
+    # Bayes Factor controls — shared across all comparisons
+    k = len(categories)
+    theta_null_uniform = 1.0 / k
+
+    with st.expander("⚖️ Bayes Factor Settings", expanded=False):
+        st.markdown(BAYES_FACTOR_INTRO_CATEGORICAL)
+        col_p1, col_p2 = st.columns([1, 2])
+        with col_p1:
+            bf_prior_choice = st.selectbox(
+                "Prior for H₁",
+                options=list(PRIOR_SPECS.keys()),
+                format_func=lambda x: x.replace("_", " ").title(),
+                key="cat_bf_prior",
+            )
+        with col_p2:
+            st.caption(PRIOR_SPECS[bf_prior_choice]["description"])
+
+        bf_interp_scale = st.radio(
+            "Interpretation scale",
+            options=["jeffreys", "kass_raftery"],
+            format_func=lambda x: "Jeffreys (1961)" if x == "jeffreys" else "Kass & Raftery (1995)",
+            horizontal=True,
+            key="cat_bf_scale",
+        )
+        st.caption(f"Uniform null: θ_null = 1/K = 1/{k} = {theta_null_uniform:.4f}")
+        st.markdown(BAYES_FACTOR_INTERPRETATION)
+
+    bf_prior_alpha = PRIOR_SPECS[bf_prior_choice]["alpha"]
+    bf_prior_beta = PRIOR_SPECS[bf_prior_choice]["beta"]
+
     for i, comp in enumerate(comparisons):
         with st.expander(f"**{comp['category']} vs {reference_category}**", expanded=(i == 0)):
             result = comp['result']
-            
+
             # Summary metrics
             col_m1, col_m2, col_m3, col_m4 = st.columns(4)
             with col_m1:
@@ -320,6 +355,32 @@ def render_results(inputs: dict):
 
             # Detailed verdict
             render_verdict_display(result, precision_goal, fmt, verdict_style)
+
+            # Bayes Factor for this category vs uniform null
+            cat_count = comp['count']
+            cat_failures = total_count - cat_count
+            bf10 = binary_single_group_bayes_factor(
+                successes=max(cat_count, 1),
+                n=total_count,
+                theta_null=theta_null_uniform,
+                prior_alpha=bf_prior_alpha,
+                prior_beta=bf_prior_beta,
+            )
+            if bf_interp_scale == "jeffreys":
+                bf_category, bf_emoji = interpret_bayes_factor_jeffreys(bf10)
+            else:
+                bf_category, bf_emoji = interpret_bayes_factor_kass_raftery(bf10)
+
+            col_bf1, col_bf2 = st.columns(2)
+            with col_bf1:
+                st.metric(f"BF₁₀ vs uniform (θ={theta_null_uniform:.3f})", f"{bf10:.3f}")
+            with col_bf2:
+                st.metric("Interpretation", f"{bf_emoji} {bf_category}")
+
+    # TODO (viz): Add a log-scale horizontal bar chart of BF₁₀ across all categories,
+    # placed between the forest plot and the Individual Comparisons section, with shaded
+    # bands for evidence thresholds (Jeffreys or Kass-Raftery scale). Mirrors how the
+    # forest plot summarises DPitG verdicts at a glance. See TODO.md § 10e.
 
     # --- Notes ---
     with st.expander("ℹ️ About One-vs-Rest Analysis"):

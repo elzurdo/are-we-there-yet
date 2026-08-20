@@ -23,12 +23,12 @@ from utils.viz import (
 from utils.verdict import render_verdict_display
 from utils.nhst import nhst_test
 from utils.bayes_factor import (
-    binary_single_group_bayes_factor, PRIOR_SPECS,
-    interpret_bayes_factor_jeffreys, interpret_bayes_factor_kass_raftery,
+    binary_single_group_bayes_factor, binary_between_groups_bayes_factor,
+    PRIOR_SPECS, interpret_bayes_factor_jeffreys, interpret_bayes_factor_kass_raftery,
 )
 from utils.tutorials import (
     NHST_LIMITATIONS, MATHS_BINARY_SINGLE_GROUP, MATHS_BINARY_BETWEEN_GROUPS,
-    BAYES_FACTOR_INTRO, BAYES_FACTOR_INTERPRETATION,
+    BAYES_FACTOR_INTRO, BAYES_FACTOR_INTERPRETATION, BAYES_FACTOR_INTRO_BINARY_BG,
 )
 from utils.rope_advisor import (
     rope_advisor_dialog_binary_single,
@@ -917,7 +917,7 @@ def _render_between_groups(inputs: dict):
 
         # --- Alternative Methods ---
         with st.expander("⚖️ Alternative Methods", expanded=False):
-            tab_nhst, = st.tabs(["NHST (p-value)"])
+            tab_nhst, tab_bf = st.tabs(["NHST (p-value)", "Bayes Factor"])
 
             with tab_nhst:
                 alpha = st.slider(
@@ -962,6 +962,66 @@ def _render_between_groups(inputs: dict):
             # Tutorial
             with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
                 st.markdown(NHST_LIMITATIONS)
+
+            with tab_bf:
+                st.markdown(BAYES_FACTOR_INTRO_BINARY_BG)
+
+                col_p1, col_p2 = st.columns([1, 2])
+                with col_p1:
+                    prior_choice = st.selectbox(
+                        "Prior for H₁",
+                        options=list(PRIOR_SPECS.keys()),
+                        format_func=lambda x: x.replace("_", " ").title(),
+                        key="binary_bg_bf_prior",
+                    )
+                with col_p2:
+                    st.caption(PRIOR_SPECS[prior_choice]["description"])
+
+                interp_scale = st.radio(
+                    "Interpretation scale",
+                    options=["jeffreys", "kass_raftery"],
+                    format_func=lambda x: "Jeffreys (1961)" if x == "jeffreys" else "Kass & Raftery (1995)",
+                    horizontal=True,
+                    key="binary_bg_bf_scale",
+                )
+
+                prior_alpha = PRIOR_SPECS[prior_choice]["alpha"]
+                prior_beta = PRIOR_SPECS[prior_choice]["beta"]
+
+                f_a = max(n_a - s_a, 1)
+                f_b = max(n_b - s_b, 1)
+                s_a_bf = max(s_a, 1)
+                s_b_bf = max(s_b, 1)
+
+                bf10 = binary_between_groups_bayes_factor(
+                    s_a=s_a_bf, f_a=f_a,
+                    s_b=s_b_bf, f_b=f_b,
+                    prior_alpha=prior_alpha,
+                    prior_beta=prior_beta,
+                )
+
+                if interp_scale == "jeffreys":
+                    category, emoji = interpret_bayes_factor_jeffreys(bf10)
+                else:
+                    category, emoji = interpret_bayes_factor_kass_raftery(bf10)
+
+                col_b1, col_b2 = st.columns(2)
+                with col_b1:
+                    st.metric("BF₁₀", f"{bf10:.3f}")
+                with col_b2:
+                    st.metric("Interpretation", f"{emoji} {category}")
+
+                bf01 = 1 / bf10
+                st.caption(f"BF₀₁ (evidence for H₀: θ_A = θ_B) = {bf01:.3f}")
+
+                # No Savage-Dickey plot here: H₀ is θ_A = θ_B (equality of two
+                # parameters), not a point null on a single parameter. The density-ratio
+                # interpretation requires a single-axis prior/posterior — which has no
+                # natural equivalent for the two-group equality test. The individual group
+                # posteriors shown above the expander provide the visual context instead.
+                # See TODO.md § 10e for details.
+
+                st.markdown(BAYES_FACTOR_INTERPRETATION)
 
     # --- Maths Tutorial ---
     with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):

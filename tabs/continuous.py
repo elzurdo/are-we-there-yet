@@ -28,6 +28,11 @@ from utils.verdict import render_verdict_display
 from utils.nhst import nhst_test
 from utils.tutorials import (
     NHST_LIMITATIONS, MATHS_CONTINUOUS_SINGLE_GROUP, MATHS_CONTINUOUS_BETWEEN_GROUPS,
+    BAYES_FACTOR_INTRO_JZS, BAYES_FACTOR_INTERPRETATION,
+)
+from utils.bayes_factor import (
+    continuous_single_group_bayes_factor, continuous_between_groups_bayes_factor,
+    JZS_PRIOR_SPECS, interpret_bayes_factor_jeffreys, interpret_bayes_factor_kass_raftery,
 )
 
 
@@ -294,7 +299,7 @@ def _render_single_group(inputs: dict):
 
         # --- Alternative Methods ---
         with st.expander("⚖️ Alternative Methods", expanded=False):
-            tab_nhst, = st.tabs(["NHST (p-value)"])
+            tab_nhst, tab_bf = st.tabs(["NHST (p-value)", "Bayes Factor"])
 
             with tab_nhst:
                 alpha = st.slider(
@@ -339,6 +344,63 @@ def _render_single_group(inputs: dict):
                 st.pyplot(fig_nhst)
 
                 st.markdown(NHST_LIMITATIONS)
+
+            with tab_bf:
+                st.markdown(BAYES_FACTOR_INTRO_JZS)
+
+                col_p1, col_p2 = st.columns([1, 2])
+                with col_p1:
+                    prior_choice = st.selectbox(
+                        "Cauchy scale r",
+                        options=list(JZS_PRIOR_SPECS.keys()),
+                        format_func=lambda x: x.replace("_", " ").title(),
+                        key="cont_sg_bf_prior",
+                    )
+                with col_p2:
+                    st.caption(JZS_PRIOR_SPECS[prior_choice]["description"])
+
+                interp_scale = st.radio(
+                    "Interpretation scale",
+                    options=["jeffreys", "kass_raftery"],
+                    format_func=lambda x: "Jeffreys (1961)" if x == "jeffreys" else "Kass & Raftery (1995)",
+                    horizontal=True,
+                    key="cont_sg_bf_scale",
+                )
+
+                r = JZS_PRIOR_SPECS[prior_choice]["r"]
+                theta_null_bf = inputs["theta_null"]
+
+                bf10 = continuous_single_group_bayes_factor(
+                    sample_mean=sample_mean,
+                    sample_std=sample_std,
+                    n=n,
+                    mu_null=theta_null_bf,
+                    r=r,
+                )
+
+                if interp_scale == "jeffreys":
+                    category, emoji = interpret_bayes_factor_jeffreys(bf10)
+                else:
+                    category, emoji = interpret_bayes_factor_kass_raftery(bf10)
+
+                col_b1, col_b2 = st.columns(2)
+                with col_b1:
+                    st.metric("BF₁₀", f"{bf10:.3f}")
+                with col_b2:
+                    st.metric("Interpretation", f"{emoji} {category}")
+
+                bf01 = 1 / bf10
+                st.caption(f"BF₀₁ (evidence for H₀: μ = μ_null) = {bf01:.3f}")
+
+                # TODO (viz): Add a Savage-Dickey plot in effect-size space.
+                # BF₁₀ equals the ratio of the Cauchy(0,r) prior to the posterior
+                # density at δ=0 (standardised effect size). A plot showing the JZS
+                # prior and the approximate standardised posterior (shifted Student-t)
+                # with a vertical line at δ=0 would mirror the binary single-group
+                # Savage-Dickey visualisation. Needs plot_jzs_prior_posterior() in
+                # utils/viz.py. See TODO.md § 10e.
+
+                st.markdown(BAYES_FACTOR_INTERPRETATION)
 
     # --- Maths Tutorial ---
     with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):
@@ -614,7 +676,7 @@ def _render_between_groups(inputs: dict):
 
         # --- Alternative Methods ---
         with st.expander("⚖️ Alternative Methods", expanded=False):
-            tab_nhst, = st.tabs(["NHST (p-value)"])
+            tab_nhst, tab_bf = st.tabs(["NHST (p-value)", "Bayes Factor"])
 
             with tab_nhst:
                 alpha = st.slider(
@@ -659,6 +721,57 @@ def _render_between_groups(inputs: dict):
             # Tutorial
             with st.expander('📚 "Why We Don\'t Use p-values Alone"', expanded=False):
                 st.markdown(NHST_LIMITATIONS)
+
+            with tab_bf:
+                st.markdown(BAYES_FACTOR_INTRO_JZS)
+
+                col_p1, col_p2 = st.columns([1, 2])
+                with col_p1:
+                    prior_choice = st.selectbox(
+                        "Cauchy scale r",
+                        options=list(JZS_PRIOR_SPECS.keys()),
+                        format_func=lambda x: x.replace("_", " ").title(),
+                        key="cont_bg_bf_prior",
+                    )
+                with col_p2:
+                    st.caption(JZS_PRIOR_SPECS[prior_choice]["description"])
+
+                interp_scale = st.radio(
+                    "Interpretation scale",
+                    options=["jeffreys", "kass_raftery"],
+                    format_func=lambda x: "Jeffreys (1961)" if x == "jeffreys" else "Kass & Raftery (1995)",
+                    horizontal=True,
+                    key="cont_bg_bf_scale",
+                )
+
+                r = JZS_PRIOR_SPECS[prior_choice]["r"]
+
+                bf10 = continuous_between_groups_bayes_factor(
+                    mean_a=mean_a, std_a=std_a, n_a=n_a,
+                    mean_b=mean_b, std_b=std_b, n_b=n_b,
+                    r=r,
+                )
+
+                if interp_scale == "jeffreys":
+                    category, emoji = interpret_bayes_factor_jeffreys(bf10)
+                else:
+                    category, emoji = interpret_bayes_factor_kass_raftery(bf10)
+
+                col_b1, col_b2 = st.columns(2)
+                with col_b1:
+                    st.metric("BF₁₀", f"{bf10:.3f}")
+                with col_b2:
+                    st.metric("Interpretation", f"{emoji} {category}")
+
+                bf01 = 1 / bf10
+                st.caption(f"BF₀₁ (evidence for H₀: μ_A = μ_B) = {bf01:.3f}")
+
+                # TODO (viz): Same Savage-Dickey plot as continuous single-group —
+                # Cauchy(0,r) prior vs. standardised posterior of δ=(μ_A−μ_B)/σ at δ=0.
+                # Reuses the same plot_jzs_prior_posterior() helper once implemented.
+                # See TODO.md § 10e.
+
+                st.markdown(BAYES_FACTOR_INTERPRETATION)
 
     # --- Maths Tutorial ---
     with st.expander('🎓 "The Maths Behind the Curtain"', expanded=False):

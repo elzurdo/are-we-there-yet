@@ -382,11 +382,68 @@ BAYES_FACTOR_INTERPRETATION = """
 - **BF₁₀ < 1**: Data favor H₀ (no effect, or BF₀₁ > 1)
 - **BF₁₀ ≈ 1**: Data are uninformative
 
-**Key differences from ePitG:**
+**Key differences from DPitG:**
 - BF requires specifying a prior under H₁ (subjective)
 - BF doesn't directly measure precision (HDI width)
 - BF grows indefinitely with sample size, even for tiny effects
 - BF compares *relative evidence*, not practical significance (ROPE)
+
+**Evidence scale references:**
+- Jeffreys, H. (1961). *Theory of Probability* (3rd ed.). Oxford University Press.
+- Kass, R.E. & Raftery, A.E. (1995). Bayes Factors. *Journal of the American Statistical Association*, 90(430), 773–795.
+"""
+
+BAYES_FACTOR_INTRO_BINARY_BG = """
+**Bayes Factor (BF₁₀)** tests whether the two groups share a common proportion:
+- **H₀**: θ_A = θ_B (equality; both groups share one proportion)
+- **H₁**: θ_A and θ_B are independent, each with a Beta(α, β) prior
+
+BF₁₀ = B(s_A+α, f_A+β) × B(s_B+α, f_B+β) / [B(α, β) × B(s_A+s_B+α, f_A+f_B+β)]
+
+where s = successes, f = failures, B = Beta function.
+
+**Method:** Beta-Binomial conjugate — exact analytical solution.
+
+> ⚠️ This BF is restricted to H₀: θ_A = θ_B (null difference Δ₀ = 0).
+> A non-zero null Δ₀ ≠ 0 has no standard conjugate solution; the ROPE framework
+> handles effect-size reasoning separately.
+
+**Reference:** Gunel, E. & Dickey, J. (1974). Bayes Factors for Independence in
+Contingency Tables. *Biometrika*, 61(3), 545–557.
+"""
+
+BAYES_FACTOR_INTRO_JZS = """
+**Bayes Factor (BF₁₀)** using the JZS (Jeffreys-Zellner-Siow) prior:
+- **H₀**: true effect = 0 (point null on the mean / mean difference)
+- **H₁**: standardised effect size δ ~ Cauchy(0, r) — a scale-invariant prior
+
+BF₁₀ = P(data | H₁) / P(data | H₀)
+
+Computed via 1D numerical integration over the JZS mixing variable g.
+The Cauchy scale r controls prior width: smaller r is conservative (mass
+near zero), larger r accommodates bigger effects a priori.
+
+**Method:** JZS prior on standardised effect size; H₀ marginal from Student-t.
+
+**Reference:** Rouder, J.N., Speckman, P.L., Sun, D., Morey, R.D., & Iverson, G. (2009).
+Bayesian *t* tests for accepting and rejecting the null hypothesis.
+*Psychonomic Bulletin & Review*, 16(2), 225–237.
+"""
+
+BAYES_FACTOR_INTRO_CATEGORICAL = """
+**Bayes Factor (BF₁₀)** for each category vs. the uniform null:
+- **H₀**: θ_k = 1/K (category k has the expected proportion under a uniform distribution)
+- **H₁**: θ_k ~ Beta(α, β)
+
+BF₁₀ = [B(c_k+α, (N−c_k)+β) / B(α, β)] / [(1/K)^c_k × (1−1/K)^(N−c_k)]
+
+where c_k = count of category k, N = total count, K = number of categories.
+
+**Method:** Beta-Binomial conjugate (same as single-group binary).
+
+**Reference:** Same analytical approach as Savage-Dickey density ratio for
+Beta-Binomial models; interpretation scales from Jeffreys (1961) and
+Kass & Raftery (1995).
 """
 
 

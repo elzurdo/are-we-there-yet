@@ -24,9 +24,9 @@ The paper uses **DPitG (Decisive Precision is the Goal)**; the old name was
 
 ### `utils/decision.py`
 
-- Function `epitg_decision()` → consider renaming to `dpitg_decision()`
+- ✅ Function `epitg_decision()` → renamed to `dpitg_decision()`
 - Update the docstring, which refers to "ePitG two-condition stopping rule"
-- Update all callers (tabs and tests)
+- ✅ Update all callers (tabs and tests)
 
 ### `CLAUDE.md` (already updated)
 
@@ -424,6 +424,113 @@ The expander / tab labels `"Let Me Peek! 👀 · Decide Now! 🎲"`, `"🔍 Post
 and `"Decide Now! 🎲"` will be repeated across every tab that adopts the
 Forced-Decision pattern. Define them once in `utils/constants.py` and import
 everywhere.
+
+---
+
+## 10. ✅ Extend Bayes Factor to all data types and modes
+
+**Status: ✅ Implemented** — all four cases done using `scipy` only (no `pingouin`).
+Citations are shown in-app inside each Bayes Factor tab/expander.
+
+---
+
+### 10a. ✅ Binary between-groups — analytical Beta-Binomial
+
+`binary_between_groups_bayes_factor(s_a, f_a, s_b, f_b, prior_alpha, prior_beta)`
+in `utils/bayes_factor.py`. Exact closed form via `scipy.special.betaln`.
+"Bayes Factor" tab added to "Alternative Methods" in `_render_between_groups()` in
+`tabs/binary.py`. Reuses `PRIOR_SPECS` and both interpretation scales.
+
+**Reference:** Gunel, E. & Dickey, J. (1974). Biometrika, 61(3), 545–557.
+
+**Remaining TODO — non-zero null (Δ₀ ≠ 0):**
+Formula tests H₀: θ_A = θ_B (Δ₀ = 0) only. General Δ₀ requires 1D numerical
+integration (no conjugate solution); not implemented because Δ₀ = 0 covers
+almost all use cases and the ROPE handles effect-size reasoning.
+See code comment in `utils/bayes_factor.py` and `# TODO (tests)` in function body.
+
+**Remaining TODO — unit tests:**
+See `# TODO (tests)` comment in `binary_between_groups_bayes_factor()`:
+equal groups, highly unequal groups, all priors, symmetry, edge case n=1 per group.
+
+---
+
+### 10b. ✅ Continuous single-group — JZS Bayes Factor
+
+`continuous_single_group_bayes_factor(sample_mean, sample_std, n, mu_null, r)`
+in `utils/bayes_factor.py`. JZS prior (Cauchy(0,r)); 1D integral via
+`scipy.integrate.quad` over log(g) on [−50, 50] with log-space arithmetic.
+`JZS_PRIOR_SPECS` exposes narrow (r=0.5), medium (r=√½, JASP default), wide (r=1).
+"Bayes Factor" tab added to "Alternative Methods" in `_render_single_group()` in
+`tabs/continuous.py`.
+
+**Reference:** Rouder et al. (2009). Psychonomic Bulletin & Review, 16(2), 225–237.
+
+**Remaining TODO — unit tests:**
+See `# TODO (tests)` comment in `continuous_single_group_bayes_factor()`:
+mean at null, mean far from null, all JZS priors, increasing-n monotonicity,
+cross-check against BayesFactor R package or pingouin, edge case n=2.
+
+---
+
+### 10c. ✅ Continuous between-groups — JZS two-sample BF
+
+`continuous_between_groups_bayes_factor(mean_a, std_a, n_a, mean_b, std_b, n_b, r)`
+in `utils/bayes_factor.py`. Same JZS integrand as 10b with Welch t-statistic,
+Welch-Satterthwaite df, and n_eff = n_A·n_B/(n_A+n_B).
+"Bayes Factor" tab added to "Alternative Methods" in `_render_between_groups()` in
+`tabs/continuous.py`.
+
+**Reference:** Rouder et al. (2009). (same as 10b)
+
+**Remaining TODO — non-zero null (Δ₀ ≠ 0):**
+Extending to Δ₀ ≠ 0 requires replacing t with t′ = (x̄_A−x̄_B−Δ₀)/SE_Welch — trivial
+but omitted because Δ₀=0 is standard and ROPE covers effect-size reasoning.
+See code comment in `utils/bayes_factor.py`.
+
+**Remaining TODO — unit tests:**
+See `# TODO (tests)` comment in `continuous_between_groups_bayes_factor()`:
+equal groups, large difference, all JZS priors, symmetry, unequal variances/n,
+cross-check against BayesFactor R / pingouin.
+
+---
+
+### 10d. ✅ Categorical — per-comparison BF (reuses binary single-group)
+
+Reuses `binary_single_group_bayes_factor` with θ_null = 1/K (uniform-categorical
+null) for each category k. "Bayes Factor Settings" expander added above the
+Individual Comparisons section in `tabs/categorical.py`; prior and interpretation
+scale are shared across all comparisons; each comparison expander shows its own
+BF₁₀ metric.
+
+---
+
+### 10e. Bayes Factor visualizations (future)
+
+**Binary between-groups — no plot planned.**
+H₀ is θ_A = θ_B (equality of two parameters), not a point null on a single
+parameter. The Savage-Dickey density ratio — which gives the BF a geometric
+interpretation as a prior/posterior height ratio at the null — has no natural
+single-axis equivalent here. Individual group posteriors are already shown above
+the Alternative Methods expander, so the visual context exists.
+
+**Continuous single-group — Savage-Dickey in effect-size space (moderate effort, high value).**
+BF₁₀ equals the ratio of the Cauchy(0, r) prior to the posterior density at δ = 0
+(standardised effect size). A plot showing the JZS prior curve and the approximate
+standardised posterior (shifted Student-t) with a vertical line at δ = 0 would be
+directly analogous to the existing binary single-group plot. Needs a helper in
+`utils/viz.py` (e.g. `plot_jzs_prior_posterior`) and a "Show Savage-Dickey" checkbox
+in `tabs/continuous.py`, similar to the existing binary single-group pattern.
+
+**Continuous between-groups — same Savage-Dickey approach as single-group (moderate effort).**
+Identical construction: Cauchy(0, r) prior vs. the standardised posterior of
+δ = (μ_A − μ_B)/σ_pooled at δ = 0. Same helper function can be reused.
+
+**Categorical — log-scale BF bar chart (low effort, high value).**
+A horizontal bar chart of BF₁₀ per category (log scale, with shaded bands for
+evidence thresholds from the chosen scale) would give a visual summary across all
+comparisons at a glance. Add as a figure above the "Individual Comparisons" section
+in `tabs/categorical.py`, rendered after the forest plot.
 
 ---
 
