@@ -21,7 +21,7 @@ def plot_posterior_binary(result: DecisionResult, successes: float, failures: fl
     Parameters
     ----------
     result : DecisionResult
-        The ePitG decision output.
+        The DPitG decision output.
     successes : float
         Number of successes (Beta alpha parameter).
     failures : float
@@ -52,7 +52,7 @@ def plot_posterior_continuous(result: DecisionResult, sample_mean: float,
     Parameters
     ----------
     result : DecisionResult
-        The ePitG decision output.
+        The DPitG decision output.
     sample_mean : float
         Sample mean.
     sample_std : float
@@ -89,7 +89,7 @@ def plot_posterior_difference(result: DecisionResult, delta: float, se: float,
     Parameters
     ----------
     result : DecisionResult
-        The ePitG decision output.
+        The DPitG decision output.
     delta : float
         Observed difference.
     se : float

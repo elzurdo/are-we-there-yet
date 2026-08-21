@@ -1,7 +1,7 @@
 """
-Decision logic for the Enhanced Precision is the Goal (ePitG) stopping algorithm.
+Decision logic for the Decisive Precision is the Goal (DPitG) stopping algorithm.
 
-The ePitG algorithm requires BOTH conditions to stop:
+The DPitG algorithm requires BOTH conditions to stop:
 1. Precision:  HDI width ≤ Goal
 2. Location:   HDI fully inside or fully outside the ROPE (conclusive)
 
@@ -17,7 +17,7 @@ from typing import Optional
 
 
 class Decision(Enum):
-    """Possible ePitG verdicts."""
+    """Possible DPitG verdicts."""
     ACCEPT = "accept"
     REJECT = "reject"
     INCONCLUSIVE = "inconclusive"  # precision met, but HDI straddles ROPE
@@ -55,7 +55,7 @@ DECISION_DISPLAY = {
 
 @dataclass
 class DecisionResult:
-    """Container for ePitG decision output."""
+    """Container for DPitG decision output."""
     decision: Decision
     hdi_min: float
     hdi_max: float
@@ -74,7 +74,7 @@ class DecisionResult:
 
     @property
     def can_stop(self) -> bool:
-        """Whether the ePitG criteria allow stopping."""
+        """Whether the DPitG criteria allow stopping."""
         return self.decision in (Decision.ACCEPT, Decision.REJECT)
 
 
@@ -107,7 +107,7 @@ def dpitg_decision(
     ci_fraction: float = 0.95,
 ) -> DecisionResult:
     """
-    Apply the Enhanced Precision is the Goal (ePitG) algorithm.
+    Apply the Decisive Precision is the Goal (DPitG) algorithm.
 
     Parameters
     ----------

@@ -1,7 +1,7 @@
 """
 Categorical variables — one-vs-rest analysis.
 
-The user provides counts for multiple categories and receives ePitG decisions
+The user provides counts for multiple categories and receives DPitG decisions
 for each category vs the reference category using binary proportion differences.
 
 TODO (v2.0): Consider full Dirichlet posterior with Monte Carlo HDI for joint uncertainty
@@ -251,7 +251,7 @@ def render_results(inputs: dict):
             ci_fraction=ci_fraction
         )
 
-        # Get ePitG decision
+        # Get DPitG decision
         result = dpitg_decision(
             hdi_min=hdi_min,
             hdi_max=hdi_max,

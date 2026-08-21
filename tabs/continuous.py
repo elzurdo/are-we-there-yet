@@ -2,7 +2,7 @@
 Continuous variables — single-group analysis.
 
 The user provides summary statistics for continuous data (mean, std, n)
-and receives an ePitG stopping decision using a Student-t posterior.
+and receives an DPitG stopping decision using a Student-t posterior.
 
 NOTE: For ordinal data (e.g., star ratings, Likert scales), treating as continuous
       works well when n ≥ 30 and the distribution is roughly symmetric. For smaller
@@ -65,15 +65,18 @@ def get_example_values(mode: str = "Single Group") -> dict:
     }
 
 
-def sidebar_inputs() -> dict:
-    """Render all Continuous inputs in the sidebar and return a dict of values."""
+def sidebar_inputs(analysis_mode: str = None) -> dict:
+    """Render all Continuous inputs in the sidebar and return a dict of values.
 
-    # --- Sub-mode (single group now; two-group later) ---
-    analysis_mode = st.sidebar.radio(
-        "Analysis",
-        ["Single Group", "Between Groups"],
-        key="cont_analysis_mode",
-    )
+    When analysis_mode is provided (set by the home page), the radio is
+    skipped and the given value is used directly.
+    """
+    if analysis_mode is None:
+        analysis_mode = st.sidebar.radio(
+            "Analysis",
+            ["Single Group", "Between Groups"],
+            key="cont_analysis_mode",
+        )
 
     if analysis_mode == "Single Group":
         return _sidebar_single_group()

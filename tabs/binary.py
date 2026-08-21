@@ -2,7 +2,7 @@
 Binary variables — single-group analysis.
 
 The user provides summary statistics for binary (Bernoulli) data
-and receives an ePitG stopping decision.
+and receives an DPitG stopping decision.
 
 Sidebar: all inputs
 Main area: summary + verdict + plot
@@ -68,15 +68,18 @@ def get_example_values(mode: str = "Single Group") -> dict:
     }
 
 
-def sidebar_inputs() -> dict:
-    """Render all Binary inputs in the sidebar and return a dict of values."""
+def sidebar_inputs(analysis_mode: str = None) -> dict:
+    """Render all Binary inputs in the sidebar and return a dict of values.
 
-    # --- Sub-mode (single group now; A/B test later) ---
-    analysis_mode = st.sidebar.radio(
-        "Analysis",
-        ["Single Group", "Between Groups"],
-        key="binary_analysis_mode",
-    )
+    When analysis_mode is provided (set by the home page), the radio is
+    skipped and the given value is used directly.
+    """
+    if analysis_mode is None:
+        analysis_mode = st.sidebar.radio(
+            "Analysis",
+            ["Single Group", "Between Groups"],
+            key="binary_analysis_mode",
+        )
 
     if analysis_mode == "Single Group":
         return _sidebar_single_group()

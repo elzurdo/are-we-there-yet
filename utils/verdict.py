@@ -1,5 +1,5 @@
 """
-Verdict display utilities for ePitG decision results.
+Verdict display utilities for DPitG decision results.
 """
 import streamlit as st
 from utils.decision import Decision, DecisionResult
@@ -13,7 +13,7 @@ def render_verdict_display(
     verdict_style: str
 ) -> None:
     """
-    Render the verdict display for an ePitG decision result.
+    Render the verdict display for an DPitG decision result.
     
     Parameters
     ----------

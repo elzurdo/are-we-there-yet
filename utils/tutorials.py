@@ -1,5 +1,5 @@
 """
-Tutorial text constants for the ePitG Decision Advisor.
+Tutorial text constants for the DPitG Decision Advisor.
 
 Centralized source of truth for all tutorial and explanatory content
 to avoid duplication across tabs.
@@ -19,12 +19,12 @@ NHST_LIMITATIONS = """
    A tiny, practically meaningless difference can be "significant" with enough data.
 
 3. **No stopping rule**: Traditional NHST doesn't tell you *when* to stop collecting data. 
-   The ePitG method explicitly plans for a precision goal.
+   The DPitG method explicitly plans for a precision goal.
 
 4. **Ignores practical equivalence**: NHST can't distinguish between "no effect" and "effect is 
    too small to matter." The ROPE addresses this directly.
 
-**ePitG combines:**
+**DPitG combines:**
 - **Precision** (HDI width ≤ Goal) — ensures your estimate is narrow enough
 - **Location** (HDI vs ROPE) — ensures you can make a conclusive decision about practical significance
 
@@ -61,7 +61,7 @@ to find the narrowest interval containing the specified mass (e.g., 95%).
 - Naturally incorporates prior information (uniform prior = minimal assumptions)
 
 **HDI width** is our precision measure: narrower intervals give more precise estimates.
-The ePitG algorithm checks whether the HDI width meets the precision goal *and* 
+The DPitG algorithm checks whether the HDI width meets the precision goal *and*
 whether the HDI location is conclusive relative to the ROPE.
 
 ---
@@ -227,7 +227,7 @@ As $n \to \infty$, the t-distribution converges to Normal.
 **The HDI** is computed numerically on this t-distribution to find the 
 narrowest interval containing the specified mass.
 
-**HDI width** is our precision measure. The ePitG algorithm ensures both 
+**HDI width** is our precision measure. The DPitG algorithm ensures both 
 precision (HDI width ≤ Goal) and conclusiveness (HDI vs ROPE).
 
 ---
@@ -289,7 +289,7 @@ has heavier tails than the Normal.
 (it won't be perfectly symmetric if $\nu$ is small, though the
 asymmetry is usually negligible).
 
-**HDI width** is our precision measure: the ePitG algorithm
+**HDI width** is our precision measure: the DPitG algorithm
 checks whether it's below the precision goal *and* whether
 the HDI is conclusive relative to the ROPE.
 

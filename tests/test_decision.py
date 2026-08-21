@@ -1,5 +1,5 @@
 """
-Tests for utils/decision.py — ePitG decision logic.
+Tests for utils/decision.py — DPitG decision logic.
 """
 import pytest
 
@@ -18,7 +18,7 @@ PRECISION_GOAL = 0.08  # narrower than ROPE width (0.10)
 
 
 def _make_result(**kwargs) -> DecisionResult:
-    """Build an epitg_decision result with sensible defaults, overriding via kwargs."""
+    """Build an dpitg_decision result with sensible defaults, overriding via kwargs."""
     defaults = dict(
         hdi_min=0.46, hdi_max=0.54,   # inside ROPE, precision met
         rope_min=ROPE_MIN, rope_max=ROPE_MAX,
@@ -68,8 +68,8 @@ class TestDecideLocation:
 # ──────────────────────────────────────────────────────────────
 
 
-class TestEpitgDecisionOutcomes:
-    """Integration tests: all four Decision outcomes from epitg_decision."""
+class TestDpitgDecisionOutcomes:
+    """Integration tests: all four Decision outcomes from Dpitg_decision."""
 
     def test_accept(self):
         """Precision met + HDI inside ROPE → ACCEPT."""

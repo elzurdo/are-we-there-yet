@@ -1,7 +1,7 @@
 """
 Null Hypothesis Significance Testing (NHST) utilities.
 
-Provides p-value calculations for comparison with ePitG sequential testing.
+Provides p-value calculations for comparison with DPitG sequential testing.
 These are provided as reference to show limitations of traditional NHST.
 """
 import numpy as np
