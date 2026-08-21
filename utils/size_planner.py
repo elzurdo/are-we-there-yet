@@ -37,38 +37,38 @@ from utils.viz import (
 DOMAIN_PRESETS = {
     "🔧 Custom (I'll set my own)": None,
     "🛒 E-commerce / conversion rate": {
-        "min_meaningful_diff_pct": 0.5,
+        "min_meaningful_effect": 0.005,
         "precision_pct": 70,
         "narrative": (
             "Your checkout conversion is around 3%. "
-            "A half-point shift (e.g. 3.0% → 3.5%) is worth acting on. "
+            "A shift of 0.005 (e.g. 0.030 → 0.035) is worth acting on. "
             "You want answers fast — being wrong occasionally just means running another test."
         ),
     },
     "🏥 Medical / clinical rate": {
-        "min_meaningful_diff_pct": 2.0,
+        "min_meaningful_effect": 0.02,
         "precision_pct": 90,
         "narrative": (
-            "You're tracking a treatment response rate around 70%. "
-            "A 2 percentage-point shift would change clinical practice. "
+            "You're tracking a treatment response rate around 0.70. "
+            "A shift of 0.02 would change clinical practice. "
             "You need tight precision — wrong calls here affect patients."
         ),
     },
     "💻 Internal tooling / ops": {
-        "min_meaningful_diff_pct": 3.0,
+        "min_meaningful_effect": 0.03,
         "precision_pct": 80,
         "narrative": (
-            "Your pipeline success rate is around 95%. "
-            "Swings under 3 percentage points are normal noise. "
+            "Your pipeline success rate is around 0.95. "
+            "Swings under 0.03 are normal noise. "
             "Data is cheap (every job run is a data point), so you'd rather collect more and be sure."
         ),
     },
     "🗳️ Election polling": {
-        "min_meaningful_diff_pct": 1.0,
+        "min_meaningful_effect": 0.01,
         "precision_pct": 90,
         "narrative": (
-            "You're polling whether a candidate crosses the 50% threshold. "
-            "A 1 percentage-point shift in true support is meaningful in a tight race. "
+            "You're polling whether a candidate crosses the 0.50 threshold. "
+            "A shift of 0.01 in true support is meaningful in a tight race. "
             "Polling data is expensive (each response costs real fieldwork), "
             "but getting the call wrong is worse — you need high precision."
         ),
@@ -79,38 +79,38 @@ DOMAIN_PRESETS = {
 BETWEEN_GROUPS_DOMAIN_PRESETS = {
     "🔧 Custom (I'll set my own)": None,
     "🛒 E-commerce / A/B test": {
-        "min_meaningful_diff_pct": 0.5,
+        "min_meaningful_effect": 0.005,
         "precision_pct": 70,
         "narrative": (
-            "Your control group converts at ~3% and your treatment at ~3.5%. "
-            "A 0.5 percentage-point lift is the smallest difference worth deploying. "
+            "Your control group converts at ~0.030 and your treatment at ~0.035. "
+            "A lift of 0.005 is the smallest difference worth deploying. "
             "Fast iteration matters — being wrong occasionally means running another test."
         ),
     },
     "🏥 Clinical trial": {
-        "min_meaningful_diff_pct": 2.0,
+        "min_meaningful_effect": 0.02,
         "precision_pct": 90,
         "narrative": (
-            "Your control arm has a ~70% response rate; treatment might shift it by 2+ pp. "
-            "A 2 percentage-point difference between arms would change clinical practice. "
+            "Your control arm has a ~0.70 response rate; treatment might shift it by 0.02 or more. "
+            "A difference of 0.02 between arms would change clinical practice. "
             "High precision is essential — wrong calls affect patients."
         ),
     },
     "💻 Canary deployment / ops": {
-        "min_meaningful_diff_pct": 3.0,
+        "min_meaningful_effect": 0.03,
         "precision_pct": 80,
         "narrative": (
-            "Your baseline pipeline succeeds ~95% of the time. "
-            "Differences under 3 pp between control and canary are normal noise. "
+            "Your baseline pipeline succeeds ~0.95 of the time. "
+            "Differences under 0.03 between control and canary are normal noise. "
             "Each job run is a data point, so you'd rather collect more and be sure."
         ),
     },
     "🗳️ Survey / polling comparison": {
-        "min_meaningful_diff_pct": 1.0,
+        "min_meaningful_effect": 0.01,
         "precision_pct": 90,
         "narrative": (
             "You're comparing support rates between two demographic groups. "
-            "A 1 percentage-point difference in true support is meaningful. "
+            "A difference of 0.01 in true support is meaningful. "
             "Fieldwork is expensive, but getting the comparison wrong matters more."
         ),
     },
@@ -119,57 +119,18 @@ BETWEEN_GROUPS_DOMAIN_PRESETS = {
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
 
-def sync_p_b_to_p_a(advisor_prefix: str, delta_null: float) -> None:
-    """on_change callback: sets p_B = p_A - delta_null (clamped to [0.01, 0.99])."""
-    p_a = st.session_state.get(f"{advisor_prefix}_explore_p_a", 0.5)
-    p_b = max(0.01, min(0.99, p_a - delta_null))
-    st.session_state[f"{advisor_prefix}_explore_p_b"] = p_b
+_PRESET_NOT_PROVIDED = object()  # sentinel: distinguish "no preset" from "Custom (None)"
 
 
-def preview_box(
-    null_val, rope_width, min_diff_pct, precision_goal,
-    null_label=None, effect_label=None, container=None,
-):
-    """Render ROPE bounds and precision goal as a success box."""
-    if container is None:
-        container = st
-    if null_label is None:
-        null_label = BINARY_SINGLE_NULL_STR
-    if effect_label is None:
-        effect_label = BINARY_SINGLE_MIN_EFFECT_STR
-    container.success(
-        f"**ROPE:** {null_label} ± {effect_label} ({min_diff_pct:.2f} pp) "
-        f"→ [{null_val - rope_width/2:.4f}, {null_val + rope_width/2:.4f}]"
-        f"  ({ROPE_WIDTH_STR} = {rope_width:.4f})  \n"
-        f"**Precision goal:** stop when {HDI_WIDTH_STR} < "
-        f"{GOAL_STR} = **{precision_goal:.4f}** ({precision_goal * 100:.2f} pp)"
-    )
+def render_domain_preset(presets: dict, advisor_prefix: str, container=None) -> tuple:
+    """Render only the domain preset selectbox into `container` (default st).
 
-
-def render_steps_1_and_2(
-    advisor_prefix: str,
-    presets: dict,
-    null_val: float,
-    null_label=None,
-    effect_label=None,
-    step1_caption: str = "What's the smallest change in proportion your team would actually act on?",
-    step1_learn_more: str = None,
-    step1_help: str = None,
-    container=None,
-) -> tuple:
-    """Render Steps 1 and 2 into `container` (default st; pass st.sidebar for the sidebar).
-
-    Returns (rope_width, precision_goal, all_ready, goal_too_wide).
-    rope_width and precision_goal are None when inputs are incomplete.
+    Handles state sync so that changing the preset pre-fills Step 1 & 2 values.
+    Returns (preset_name, preset) where preset is None when Custom is selected.
     """
     if container is None:
         container = st
-    if null_label is None:
-        null_label = BINARY_SINGLE_NULL_STR
-    if effect_label is None:
-        effect_label = BINARY_SINGLE_MIN_EFFECT_STR
 
-    # ── Optional domain preset ────────────────────────────────────────────────
     preset_name = container.selectbox(
         "Start from a domain preset (optional)",
         options=list(presets.keys()),
@@ -182,16 +143,98 @@ def render_steps_1_and_2(
     )
     preset = presets[preset_name]
 
-    if preset is not None and "narrative" in preset:
-        container.info(preset["narrative"])
-
     prev_preset = st.session_state.get(f"{advisor_prefix}_prev_preset")
     if preset_name != prev_preset:
         st.session_state[f"{advisor_prefix}_prev_preset"] = preset_name
         if preset is not None:
-            st.session_state[f"{advisor_prefix}_min_diff_pct"] = float(preset["min_meaningful_diff_pct"])
+            st.session_state[f"{advisor_prefix}_min_effect"] = float(preset["min_meaningful_effect"])
             if "precision_pct" in preset:
                 st.session_state[f"{advisor_prefix}_precision_pct"] = int(preset["precision_pct"])
+
+    return preset_name, preset
+
+
+def sync_p_b_to_p_a(advisor_prefix: str, delta_null: float) -> None:
+    """on_change callback: sets p_B = p_A - delta_null (clamped to [0.01, 0.99])."""
+    p_a = st.session_state.get(f"{advisor_prefix}_explore_p_a", 0.5)
+    p_b = max(0.01, min(0.99, p_a - delta_null))
+    st.session_state[f"{advisor_prefix}_explore_p_b"] = p_b
+
+
+def preview_box(
+    null_val, rope_width, min_effect, precision_goal,
+    null_label=None, effect_label=None, container=None,
+):
+    """Render ROPE bounds and precision goal as a success box."""
+    if container is None:
+        container = st
+    if null_label is None:
+        null_label = BINARY_SINGLE_NULL_STR
+    if effect_label is None:
+        effect_label = BINARY_SINGLE_MIN_EFFECT_STR
+    container.success(
+        f"**ROPE:** {null_label} ± {effect_label} ({min_effect:.4f}) "
+        f"→ [{null_val - rope_width/2:.4f}, {null_val + rope_width/2:.4f}]"
+        f"  ({ROPE_WIDTH_STR} = {rope_width:.4f})  \n"
+        f"**Precision goal:** stop when {HDI_WIDTH_STR} < "
+        f"{GOAL_STR} = **{precision_goal:.4f}**"
+    )
+
+
+def render_steps_1_and_2(
+    advisor_prefix: str,
+    presets: dict,
+    null_val: float,
+    null_label=None,
+    effect_label=None,
+    step1_caption: str = "What's the smallest change in proportion your team would actually act on?\n This will determine the ROPE (Region of Practical Equivalence) around the null value.",
+    step1_learn_more: str = None,
+    step1_help: str = None,
+    container=None,
+    preset=_PRESET_NOT_PROVIDED,
+) -> tuple:
+    """Render Steps 1 and 2 into `container` (default st; pass st.sidebar for the sidebar).
+
+    When `preset` is supplied (from render_domain_preset), the internal preset
+    selectbox is skipped — caller owns the preset widget. Pass the sentinel
+    _PRESET_NOT_PROVIDED (the default) to get the old self-contained behaviour,
+    which is what rope_advisor.py uses.
+
+    Returns (rope_width, precision_goal, all_ready, goal_too_wide).
+    rope_width and precision_goal are None when inputs are incomplete.
+    """
+    if container is None:
+        container = st
+    if null_label is None:
+        null_label = BINARY_SINGLE_NULL_STR
+    if effect_label is None:
+        effect_label = BINARY_SINGLE_MIN_EFFECT_STR
+
+    # ── Optional domain preset ────────────────────────────────────────────────
+    if preset is _PRESET_NOT_PROVIDED:
+        # Self-contained mode: render the selectbox here (rope_advisor.py path)
+        preset_name = container.selectbox(
+            "Start from a domain preset (optional)",
+            options=list(presets.keys()),
+            index=0,
+            help=(
+                "Pre-fills the questions below with typical values for that domain. "
+                "You can still override anything."
+            ),
+            key=f"{advisor_prefix}_preset",
+        )
+        preset = presets[preset_name]
+
+        prev_preset = st.session_state.get(f"{advisor_prefix}_prev_preset")
+        if preset_name != prev_preset:
+            st.session_state[f"{advisor_prefix}_prev_preset"] = preset_name
+            if preset is not None:
+                st.session_state[f"{advisor_prefix}_min_effect"] = float(preset["min_meaningful_effect"])
+                if "precision_pct" in preset:
+                    st.session_state[f"{advisor_prefix}_precision_pct"] = int(preset["precision_pct"])
+
+    if preset is not None and "narrative" in preset:
+        container.info(preset["narrative"])
 
     container.divider()
 
@@ -205,20 +248,20 @@ def render_steps_1_and_2(
 
     _help = step1_help or f"The ROPE spans ±{effect_label} around {null_label}. {ROPE_WIDTH_STR} = 2{effect_label}."
     _diff_kwargs = {}
-    if f"{advisor_prefix}_min_diff_pct" not in st.session_state:
-        _diff_kwargs["value"] = float(preset["min_meaningful_diff_pct"]) if preset else None
-    min_diff_pct = container.number_input(
-        f"Minimum meaningful {effect_label} around each side of {null_label} (pp)",
-        min_value=0.01,
-        max_value=50.0,
-        step=0.5,
-        format="%.2f",
+    if f"{advisor_prefix}_min_effect" not in st.session_state:
+        _diff_kwargs["value"] = float(preset["min_meaningful_effect"]) if preset else None
+    min_effect = container.number_input(
+        f"Minimum meaningful {effect_label} around each side of {null_label}",
+        min_value=0.0001,
+        max_value=0.50,
+        step=0.001,
+        format="%.4f",
         help=_help,
-        key=f"{advisor_prefix}_min_diff_pct",
+        key=f"{advisor_prefix}_min_effect",
         **_diff_kwargs,
     )
 
-    rope_width = (2 * min_diff_pct / 100.0) if min_diff_pct is not None else None
+    rope_width = (2 * min_effect) if min_effect is not None else None
 
     if rope_width is not None:
         container.caption(
@@ -281,7 +324,7 @@ def render_steps_1_and_2(
             )
         else:
             preview_box(
-                null_val, rope_width, min_diff_pct, precision_goal,
+                null_val, rope_width, min_effect, precision_goal,
                 null_label=null_label, effect_label=effect_label, container=container,
             )
     else:

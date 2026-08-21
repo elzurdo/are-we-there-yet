@@ -42,10 +42,10 @@ def _on_apply_click(advisor_prefix: str, result_key: str) -> None:
     result dict to result_key. The sidebar flush block maps result keys to the
     mode-specific session state keys for ROPE / precision widgets.
     """
-    min_diff_pct = st.session_state.get(f"{advisor_prefix}_min_diff_pct")
-    if min_diff_pct is None:
+    min_effect = st.session_state.get(f"{advisor_prefix}_min_effect")
+    if min_effect is None:
         return
-    rope_width_val = 2 * min_diff_pct / 100.0
+    rope_width_val = 2 * min_effect
 
     precision_pct = st.session_state.get(f"{advisor_prefix}_precision_pct", 80)
     precision_goal_val = rope_width_val * precision_pct / 100.0
@@ -83,8 +83,8 @@ def rope_advisor_dialog_binary_single(theta_null: float = 0.5) -> None:
 
     learn_more_sg = (
         f"If your baseline is {BINARY_SINGLE_NULL_STR} = 0.50 and a shift to "
-        f"{BINARY_SINGLE_OBSERVE_STR} = 0.52 would change a decision, enter **2** "
-        f"(percentage points), meaning {BINARY_SINGLE_MIN_EFFECT_STR} = 0.02.  \n"
+        f"{BINARY_SINGLE_OBSERVE_STR} = 0.52 would change a decision, enter **0.02**, "
+        f"meaning {BINARY_SINGLE_MIN_EFFECT_STR} = 0.02.  \n"
         f"The **ROPE** (Region of Practical Equivalence) spans "
         f"±{BINARY_SINGLE_MIN_EFFECT_STR} around {BINARY_SINGLE_NULL_STR}, "
         f"giving {ROPE_WIDTH_STR} = 2{BINARY_SINGLE_MIN_EFFECT_STR}."
@@ -170,7 +170,7 @@ def rope_advisor_dialog_binary_between_groups(
     learn_more_bg = (
         f"If {label_a}'s rate is {theta_hat_label(label_a)} = 0.50 "
         f"and {label_b}'s is {theta_hat_label(label_b)} = 0.52, "
-        f"the difference Δ = {theta_hat_label(label_a)} − {theta_hat_label(label_b)} = −0.02 — a 2 pp effect.  \n"
+        f"the difference Δ = {theta_hat_label(label_a)} − {theta_hat_label(label_b)} = −0.02.  \n"
         f"The **ROPE** (Region of Practical Equivalence) spans "
         f"±{ROPE_HALF_WIDTH_STR} around {BINARY_BG_NULL_STR}, "
         f"so {ROPE_WIDTH_STR} equals twice the value you enter below."
