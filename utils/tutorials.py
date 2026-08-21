@@ -376,6 +376,46 @@ GLOSSARY_TABLE = """
 </table>
 """
 
+GLOSSARY_TABLE_BETWEEN_GROUPS = """
+<table>
+  <thead>
+    <tr><th>Term</th><th>Definition</th><th>Role</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>&theta;<sub>null</sub></td>
+      <td>Null value</td>
+      <td>The hypothesised reference proportion (e.g. 0.5 for a fair coin). The ROPE region must contain this value.</td>
+    </tr>
+    <tr>
+      <td>&theta;&#x0302;</td>
+      <td>Observed proportion</td>
+      <td>Point estimate of the true proportion from the current sample: &theta;&#x0302; = s / n.</td>
+    </tr>
+    <tr>
+      <td>ω<sub>ROPE</sub></td>
+      <td>ROPE Width</td>
+      <td>ω<sub>ROPE</sub> = ROPE<sub>max</sub> − ROPE<sub>min</sub>. Effects inside this band are considered practically equivalent to the null.</td>
+    </tr>
+    <tr>
+      <td>ω<sub>goal</sub></td>
+      <td>Precision Goal</td>
+      <td>Target posterior width used as a stopping criterion.<br>By definition ω<sub>goal</sub> ≤ ω<sub>ROPE</sub>.</td>
+    </tr>
+    <tr>
+      <td>ω<sub>HDI</sub></td>
+      <td>HDI Width</td>
+      <td>Actual posterior width of the current sample. <br>ω<sub>HDI</sub>= HDI<sub>max</sub> − HDI<sub>min</sub>. <br>Stopping requires ω<sub>HDI</sub> ≤ ω<sub>goal</sub>.</td>
+    </tr>
+    <tr>
+      <td>r</td>
+      <td>Group ratio</td>
+      <td>Allocation fraction: r = n<sub>A</sub> / (n<sub>A</sub> + n<sub>B</sub>). Equal group sizes correspond to r&nbsp;=&nbsp;0.5.</td>
+    </tr>
+  </tbody>
+</table>
+"""
+
 BAYES_FACTOR_INTERPRETATION = """
 **Interpretation:**
 - **BF₁₀ > 1**: Data favor H₁ (effect exists)

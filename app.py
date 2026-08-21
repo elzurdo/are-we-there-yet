@@ -23,7 +23,7 @@ st.set_page_config(
 
 from tabs import binary, continuous, categorical
 from tabs import prospective_binary
-from utils.tutorials import GLOSSARY_TABLE
+from utils.tutorials import GLOSSARY_TABLE, GLOSSARY_TABLE_BETWEEN_GROUPS
 from utils.constants import (
     PREPRINT_URL, PREPRINT_CITE_INLINE, PREPRINT_APA, PREPRINT_BIBTEX, PREPRINT_ARXIV_ID,
 )
@@ -220,8 +220,9 @@ def _render_prospective():
 
     prospective_binary.render_results(inputs)
 
+    _glossary = GLOSSARY_TABLE_BETWEEN_GROUPS if _app_analysis_mode == "Between Groups" else GLOSSARY_TABLE
     with st.expander("📖 Glossary"):
-        st.markdown(GLOSSARY_TABLE, unsafe_allow_html=True)
+        st.markdown(_glossary, unsafe_allow_html=True)
 
     _useful_expander()
     _about_expander()
@@ -330,8 +331,9 @@ def _render_retrospective():
                 "Click the 🧭 button in the sidebar."
             )
 
+    _glossary = GLOSSARY_TABLE_BETWEEN_GROUPS if _app_analysis_mode == "Between Groups" else GLOSSARY_TABLE
     with st.expander("📖 Glossary"):
-        st.markdown(GLOSSARY_TABLE, unsafe_allow_html=True)
+        st.markdown(_glossary, unsafe_allow_html=True)
 
     _useful_expander()
     _about_expander()

@@ -379,6 +379,11 @@ def render_step3_single(
     z_star = st.session_state.get(f"{advisor_prefix}_z_star", 1.96)
     n_goal_est = binomial_rate_ci_width_to_sample_size(explore_theta, explore_omega, z_star=z_star)
     n_goal_display = max(1, int(n_goal_est))
+    st.latex(
+        r"N_{\rm goal} \approx \left\lceil"
+        r"\frac{4\,z_*^2\;\hat\theta\,(1-\hat\theta)}{\omega_{\rm goal}^2}"
+        r"\right\rceil"
+    )
     st.metric(label="N_goal (estimated minimum sample size)", value=f"{n_goal_display:,}")
 
     # TODO: update z_star to derive from a user-chosen confidence level
@@ -546,6 +551,14 @@ def render_step3_between(
     n_a_goal = max(1, math.ceil(r * n_total_est))
     n_b_goal = max(1, math.ceil((1 - r) * n_total_est))
 
+    st.latex(
+        r"N_{\rm goal,\,total} \approx \left\lceil"
+        r"\frac{4\,z_*^2 \left["
+        r"\dfrac{\hat\theta_A(1-\hat\theta_A)}{r}"
+        r"+\dfrac{\hat\theta_B(1-\hat\theta_B)}{1-r}"
+        r"\right]}{\omega_{\rm goal}^2}"
+        r"\right\rceil"
+    )
     col_na, col_nb = st.columns(2)
     with col_na:
         st.metric(label=f"N_{label_a} goal", value=f"{n_a_goal:,}")
