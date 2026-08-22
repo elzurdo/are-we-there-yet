@@ -729,6 +729,77 @@ def plot_n_goal_by_sigma(
     return fig
 
 
+def plot_n_goal_by_sigma_between_groups(
+    omega_goal=None,
+    sigma_a_highlight=None,
+    sigma_b_fixed=None,
+    r=0.5,
+    z_star=1.96,
+    sigma_a_min=1.0,
+    sigma_a_max=10.0,
+    w_goal_min=None,
+    w_goal_max=None,
+    n_background_curves=7,
+    label_a: str = "A",
+    label_b: str = "B",
+):
+    """Plot N_total_goal vs σ_A (sweeping sigma_a_min–sigma_a_max) for fixed σ_B and ratio r.
+
+    Mirrors plot_n_goal_by_sigma for the between-groups continuous setting.
+    """
+    sigmas_a = np.linspace(sigma_a_min, sigma_a_max, 200)
+    _sigma_b = sigma_b_fixed if sigma_b_fixed is not None else 0.0
+
+    def _n_total(sa, omega):
+        v_eff = sa ** 2 / r + _sigma_b ** 2 / (1 - r)
+        return 4 * z_star ** 2 * v_eff / omega ** 2
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    if w_goal_min is not None and w_goal_max is not None and w_goal_min < w_goal_max:
+        bg_goals = np.linspace(w_goal_min, w_goal_max, n_background_curves)
+        for goal in bg_goals:
+            ax.plot(sigmas_a, _n_total(sigmas_a, goal), color="gray", alpha=0.15, linewidth=1)
+        n_top = _n_total(sigmas_a, w_goal_min)
+        n_bot = _n_total(sigmas_a, w_goal_max)
+        ax.fill_between(sigmas_a, n_bot, n_top, alpha=0.06, color="gray")
+        ax.text(
+            sigmas_a[5], float(np.max(n_top)) * 0.92,
+            f"ω = {w_goal_min:.4g}–{w_goal_max:.4g}",
+            fontsize=8, color="gray", alpha=0.6,
+        )
+
+    if omega_goal is not None:
+        n_user = _n_total(sigmas_a, omega_goal)
+        ax.plot(sigmas_a, n_user, color="steelblue", linewidth=2.5,
+                label=f"{GOAL_STR} = {omega_goal:.4g}", zorder=3)
+
+        if sigma_a_highlight is not None:
+            n_at = _n_total(sigma_a_highlight, omega_goal)
+            ax.plot(sigma_a_highlight, n_at, "o", color="darkred",
+                    markersize=10, zorder=5,
+                    label=f"{N_TOTAL_STR} ≈ {max(1, int(np.ceil(n_at))):,}"
+                          f" at σ_{label_a} = {sigma_a_highlight:.4g}")
+
+    if sigma_b_fixed is not None:
+        ax.axvline(x=sigma_b_fixed, color="orange", linestyle="--", alpha=0.5, linewidth=1.5,
+                   label=f"σ_{label_b} = {sigma_b_fixed:.4g} (fixed)")
+
+    ax.legend(fontsize=9)
+    ax.grid(alpha=0.3)
+    ax.set_xlabel(f"σ_{label_a} (standard deviation, {label_a})", fontsize=12)
+    ax.set_ylabel(N_TOTAL_GOAL_STR, fontsize=12)
+    title_sigma_b = f"{sigma_b_fixed:.4g}" if sigma_b_fixed is not None else "?"
+    ax.set_title(
+        f"Minimum {N_TOTAL_STR} to Achieve Precision Goal"
+        f"  (σ_{label_b}={title_sigma_b}, r={r:.2f})",
+        fontsize=13,
+    )
+    ax.set_yticks([])
+    fig.tight_layout()
+    return fig
+
+
 def plot_n_goal_by_parameter(
     omega_goal=None,
     theta_highlight=None,

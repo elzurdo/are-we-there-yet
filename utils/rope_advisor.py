@@ -31,10 +31,12 @@ from utils.size_planner import (
     DOMAIN_PRESETS,
     BETWEEN_GROUPS_DOMAIN_PRESETS,
     CONTINUOUS_SINGLE_DOMAIN_PRESETS,
+    CONTINUOUS_BETWEEN_DOMAIN_PRESETS,
     render_steps_1_and_2,
     render_step3_single,
     render_step3_between,
     render_step3_single_continuous,
+    render_step3_between_continuous,
 )
 
 
@@ -301,6 +303,112 @@ def rope_advisor_dialog_continuous_single(mu_null: float = 0.0) -> None:
         disabled=not all_ready or goal_too_wide,
         on_click=_on_apply_click,
         kwargs={"advisor_prefix": pfx, "result_key": "_rope_advisor_cont_sg_result"},
+    )
+    st.caption(
+        "These values will fill in the sidebar — "
+        "then enter your observed data to get a verdict."
+    )
+
+
+# ── Continuous between-groups dialog ──────────────────────────────────────────
+
+@st.dialog("🧭 Help me choose ROPE & Precision Goal", width="large")
+def rope_advisor_dialog_continuous_between(
+    delta_null: float = 0.0,
+    label_a: str = "A",
+    label_b: str = "B",
+    std_a_default: float = None,
+    std_b_default: float = None,
+) -> None:
+    """Interactive 3-step guide for continuous between-groups ROPE & precision goal.
+
+    On Apply, stages result to _rope_advisor_cont_bg_result so the flush block
+    in _sidebar_between_groups (continuous.py) can inject the values before widgets render.
+    σ ranges for Step 3 are pre-seeded from std_a_default/std_b_default when provided.
+    """
+    if "_rope_advisor_cont_bg_result" in st.session_state:
+        st.rerun(scope="app")
+
+    pfx = "_advisor_cont_bg"
+
+    learn_more = (
+        f"Enter the smallest difference in means between groups that your team would act on.  \n"
+        f"The **ROPE** (Region of Practical Equivalence) spans ±Δ_min around Δ₀, "
+        f"giving {ROPE_WIDTH_STR} = 2 × Δ_min."
+    )
+
+    rope_width, precision_goal, all_ready, goal_too_wide = render_steps_1_and_2(
+        advisor_prefix=pfx,
+        presets=CONTINUOUS_BETWEEN_DOMAIN_PRESETS,
+        null_val=delta_null,
+        null_label="Δ₀",
+        effect_label="Δ_min",
+        step1_caption=(
+            "What's the smallest difference in means between groups that your team would act on? "
+            "This will determine the ROPE around the null difference."
+        ),
+        step1_learn_more=learn_more,
+        step1_help="The ROPE spans ±Δ_min around Δ₀. " + ROPE_WIDTH_STR + " = 2 × Δ_min.",
+        min_effect_max=None,
+        min_effect_step=0.1,
+        min_effect_format="%.2f",
+    )
+
+    if all_ready and not goal_too_wide:
+        st.divider()
+
+        preset_name = st.session_state.get(f"{pfx}_preset", "🔧 Custom (I'll set my own)")
+        preset = CONTINUOUS_BETWEEN_DOMAIN_PRESETS.get(preset_name)
+
+        if std_a_default is not None:
+            sigma_a_min_default = max(0.001, std_a_default * 0.5)
+            sigma_a_max_default = std_a_default * 3.0
+        elif preset:
+            sigma_a_min_default = preset.get("sigma_a_min", rope_width)
+            sigma_a_max_default = preset.get("sigma_a_max", rope_width * 5)
+        else:
+            sigma_a_min_default = rope_width
+            sigma_a_max_default = rope_width * 5
+
+        if std_b_default is not None:
+            sigma_b_min_default = max(0.001, std_b_default * 0.5)
+            sigma_b_max_default = std_b_default * 3.0
+        elif preset:
+            sigma_b_min_default = preset.get("sigma_b_min", rope_width)
+            sigma_b_max_default = preset.get("sigma_b_max", rope_width * 5)
+        else:
+            sigma_b_min_default = rope_width
+            sigma_b_max_default = rope_width * 5
+
+        _, _, explore_omega = render_step3_between_continuous(
+            advisor_prefix=pfx,
+            rope_width=rope_width,
+            precision_goal=precision_goal,
+            sigma_a_min_default=sigma_a_min_default,
+            sigma_a_max_default=sigma_a_max_default,
+            sigma_b_min_default=sigma_b_min_default,
+            sigma_b_max_default=sigma_b_max_default,
+            label_a=label_a,
+            label_b=label_b,
+        )
+
+        omega_changed = abs(explore_omega - precision_goal) > 1e-6
+        if omega_changed:
+            st.success(
+                f"**Values that will be applied:**  \n"
+                f"- {GOAL_STR} updated to **{explore_omega:.4g}** "
+                f"(was {precision_goal:.4g} from Step 2)  \n"
+                f"- **ROPE:** [{delta_null - rope_width/2:.4g}, "
+                f"{delta_null + rope_width/2:.4g}] "
+                f"({ROPE_WIDTH_STR} = {rope_width:.4g})"
+            )
+
+    st.button(
+        "✅ Apply",
+        type="primary",
+        disabled=not all_ready or goal_too_wide,
+        on_click=_on_apply_click,
+        kwargs={"advisor_prefix": pfx, "result_key": "_rope_advisor_cont_bg_result"},
     )
     st.caption(
         "These values will fill in the sidebar — "

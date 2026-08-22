@@ -25,7 +25,7 @@ from utils.constants import ROPE_MODE_HELP, GOAL_STR, XBAR_STR, xbar_label, s_la
 from utils.decision import dpitg_decision
 from utils.viz import plot_posterior_continuous, plot_posterior_difference, plot_nhst_posterior, plot_two_continuous_posteriors
 from utils.verdict import render_verdict_display
-from utils.rope_advisor import rope_advisor_dialog_continuous_single
+from utils.rope_advisor import rope_advisor_dialog_continuous_single, rope_advisor_dialog_continuous_between
 from utils.nhst import nhst_test
 from utils.tutorials import (
     NHST_LIMITATIONS, MATHS_CONTINUOUS_SINGLE_GROUP, MATHS_CONTINUOUS_BETWEEN_GROUPS,
@@ -471,6 +471,15 @@ def _sidebar_between_groups() -> dict:
     group_a = _sidebar_group_inputs(label_a, "cont_bg_a")
     group_b = _sidebar_group_inputs(label_b, "cont_bg_b")
 
+    # Flush values committed by the ROPE adviser dialog before ROPE / precision
+    # widgets render so they pick up the new defaults.
+    if "_rope_advisor_cont_bg_result" in st.session_state:
+        _r = st.session_state.pop("_rope_advisor_cont_bg_result")
+        st.session_state["cont_bg_rope_mode"] = _r["rope_mode"]
+        st.session_state["cont_bg_rope_width"] = _r["rope_width"]
+        st.session_state["cont_bg_precision_goal"] = _r["precision_goal"]
+        st.session_state["_force_commit"] = True
+
     st.sidebar.markdown("### 🎯 Hypothesis & Effect Size")
 
     # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
@@ -514,6 +523,20 @@ def _sidebar_between_groups() -> dict:
         value=4.0, step=0.1, format="%.3f", key="cont_bg_precision_goal",
         help="Must not exceed the ROPE width for the method to work.",
     )
+
+    if st.sidebar.button(
+        "🧭 Help me choose",
+        key="cont_bg_rope_advisor_btn",
+        help="Answer 3 short questions to get recommended ROPE & precision-goal values.",
+        use_container_width=True,
+    ):
+        rope_advisor_dialog_continuous_between(
+            delta_null=theta_null,
+            label_a=label_a,
+            label_b=label_b,
+            std_a_default=group_a.get("std"),
+            std_b_default=group_b.get("std"),
+        )
 
     ci_fraction = CI_FRACTION
     decimal_places = 3

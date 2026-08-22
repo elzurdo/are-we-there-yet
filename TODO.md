@@ -92,7 +92,7 @@ writes before widget instantiation).
 
 **Follow-ups:**
 
-### 6a. Apply the same advisor pattern to the other three cases
+### 6a. ✅ Apply the same advisor pattern to the other three cases
 - ✅ Binary between-groups — `rope_advisor_dialog_binary_between_groups()` in `utils/rope_advisor.py`.
   Steps 1–2 shared via `_steps_1_and_2()` helper; Step 3 has p_A, p_B, ω_goal sliders
   with optional p_B linking; `BETWEEN_GROUPS_DOMAIN_PRESETS` with 4 domains.
@@ -101,8 +101,17 @@ writes before widget instantiation).
   `BINARY_BG_NULL_STR` / `BINARY_BG_PARAMETER_ESTIMATE_STR` in `utils/constants.py`.
   Session state namespaced: `_advisor_sg_*` / `_advisor_bg_*`, result keys
   `_rope_advisor_sg_result` / `_rope_advisor_bg_result`.
-- Continuous single-group
-- Continuous between-groups
+- ✅ Continuous single-group — `rope_advisor_dialog_continuous_single()` in `utils/rope_advisor.py`.
+  Step 3 uses σ slider + `plot_n_goal_by_sigma()`; `CONTINUOUS_SINGLE_DOMAIN_PRESETS` with 4 domains.
+  Result key `_rope_advisor_cont_sg_result`; flush block in `_sidebar_single_group()`.
+- ✅ Continuous between-groups — `rope_advisor_dialog_continuous_between()` in `utils/rope_advisor.py`.
+  Step 3 has σ_A and σ_B sliders (σ_B ranges pre-seeded from current sidebar std inputs if available),
+  optional σ_B linking; `CONTINUOUS_BETWEEN_DOMAIN_PRESETS` with 4 domains.
+  Supporting additions: `plot_n_goal_by_sigma_between_groups()` in `utils/viz.py`,
+  `render_step3_between_continuous()` and `sync_sigma_b_to_sigma_a()` in `utils/size_planner.py`.
+  Result key `_rope_advisor_cont_bg_result`; flush block in `_sidebar_between_groups()`.
+  Prospective planning (`tabs/prospective_continuous.py`) also completed for this mode
+  (previously showed "coming soon").
 
 ### 6b. Domain presets — future additions
 Consider adding presets for:
@@ -150,6 +159,16 @@ then enter your observed data to get a verdict."
 For a sample-size plot, showing actual N values is more informative. Ticks
 should use rounded values in the range of interest — e.g. thousands when
 N_goal is in the thousands, hundreds when in the hundreds.
+
+### 6k. UX: group ratio r slider placement in between-groups Step 3
+Currently the group ratio `r = n_A / (n_A + n_B)` slider lives inside the collapsed
+"⚙️ Advanced" expander in both `render_step3_between` (binary) and
+`render_step3_between_continuous` (continuous). Users report difficulty finding it.
+**Decision needed:** move `r` to the main interactive area (alongside the θ/σ and ω
+sliders, before the N_goal computation) so changes are immediately visible in the metrics
+and plot above — or keep it in Advanced (less clutter, since equal allocation is the
+typical case). Tradeoff: discoverability vs. visual noise for users who never need to
+change it.
 
 ---
 

@@ -33,6 +33,7 @@ from utils.viz import (
     plot_n_goal_by_parameter,
     plot_n_goal_by_parameter_between_groups,
     plot_n_goal_by_sigma,
+    plot_n_goal_by_sigma_between_groups,
 )
 
 # ── Single-group domain presets ───────────────────────────────────────────────
@@ -170,6 +171,64 @@ BETWEEN_GROUPS_DOMAIN_PRESETS = {
 }
 
 
+# ── Continuous between-groups domain presets ──────────────────────────────────
+CONTINUOUS_BETWEEN_DOMAIN_PRESETS = {
+    "🔧 Custom (I'll set my own)": None,
+    "🏥 Clinical trial": {
+        "min_meaningful_effect": 5.0,
+        "precision_pct": 85,
+        "sigma_a_min": 10.0,
+        "sigma_a_max": 30.0,
+        "sigma_b_min": 10.0,
+        "sigma_b_max": 30.0,
+        "narrative": (
+            "You're comparing a treatment arm against a control on a biomarker "
+            "(e.g. blood pressure, cholesterol). A difference of 5 units would change "
+            "clinical practice. High precision is essential — wrong calls affect patients."
+        ),
+    },
+    "📚 Educational comparison": {
+        "min_meaningful_effect": 5.0,
+        "precision_pct": 80,
+        "sigma_a_min": 10.0,
+        "sigma_a_max": 25.0,
+        "sigma_b_min": 10.0,
+        "sigma_b_max": 25.0,
+        "narrative": (
+            "You're comparing test scores between two teaching methods on a 0–100 scale. "
+            "A difference of 5 points is educationally meaningful. "
+            "Precision matters but data is relatively cheap to collect."
+        ),
+    },
+    "⚙️ Engineering / QC": {
+        "min_meaningful_effect": 0.5,
+        "precision_pct": 90,
+        "sigma_a_min": 1.0,
+        "sigma_a_max": 5.0,
+        "sigma_b_min": 1.0,
+        "sigma_b_max": 5.0,
+        "narrative": (
+            "You're comparing a manufacturing parameter (diameter, weight) across two "
+            "production lines. Deviations above 0.5 units exceed tolerance. "
+            "Tight precision is required — process decisions are expensive to reverse."
+        ),
+    },
+    "📊 Survey / Likert comparison": {
+        "min_meaningful_effect": 0.5,
+        "precision_pct": 75,
+        "sigma_a_min": 0.5,
+        "sigma_a_max": 2.5,
+        "sigma_b_min": 0.5,
+        "sigma_b_max": 2.5,
+        "narrative": (
+            "You're comparing average Likert responses between two groups. "
+            "A shift of 0.5 scale points is the smallest perceptible difference. "
+            "Moderate precision is acceptable and data is relatively cheap."
+        ),
+    },
+}
+
+
 # ── Shared helpers ─────────────────────────────────────────────────────────────
 
 _PRESET_NOT_PROVIDED = object()  # sentinel: distinguish "no preset" from "Custom (None)"
@@ -203,10 +262,9 @@ def render_domain_preset(presets: dict, advisor_prefix: str, container=None) -> 
             st.session_state[f"{advisor_prefix}_min_effect"] = float(preset["min_meaningful_effect"])
             if "precision_pct" in preset:
                 st.session_state[f"{advisor_prefix}_precision_pct"] = int(preset["precision_pct"])
-            if "sigma_min" in preset:
-                st.session_state[f"{advisor_prefix}_sigma_min"] = float(preset["sigma_min"])
-            if "sigma_max" in preset:
-                st.session_state[f"{advisor_prefix}_sigma_max"] = float(preset["sigma_max"])
+            for _key in ("sigma_min", "sigma_max", "sigma_a_min", "sigma_a_max", "sigma_b_min", "sigma_b_max"):
+                if _key in preset:
+                    st.session_state[f"{advisor_prefix}_{_key}"] = float(preset[_key])
 
     return preset_name, preset
 
@@ -292,6 +350,9 @@ def render_steps_1_and_2(
                 st.session_state[f"{advisor_prefix}_min_effect"] = float(preset["min_meaningful_effect"])
                 if "precision_pct" in preset:
                     st.session_state[f"{advisor_prefix}_precision_pct"] = int(preset["precision_pct"])
+                for _key in ("sigma_min", "sigma_max", "sigma_a_min", "sigma_a_max", "sigma_b_min", "sigma_b_max"):
+                    if _key in preset:
+                        st.session_state[f"{advisor_prefix}_{_key}"] = float(preset[_key])
 
     if preset is not None and "narrative" in preset:
         container.info(preset["narrative"])
@@ -770,3 +831,227 @@ def render_step3_single_continuous(
     st.pyplot(fig)
 
     return explore_sigma, explore_omega
+
+
+def sync_sigma_b_to_sigma_a(advisor_prefix: str) -> None:
+    """on_change callback: sets σ_B = σ_A (clamped to σ_B slider range)."""
+    sigma_a = st.session_state.get(f"{advisor_prefix}_explore_sigma_a")
+    if sigma_a is None:
+        return
+    b_min = float(st.session_state.get(f"{advisor_prefix}_sigma_b_min", 0.001))
+    b_max = float(st.session_state.get(f"{advisor_prefix}_sigma_b_max", float("inf")))
+    st.session_state[f"{advisor_prefix}_explore_sigma_b"] = max(b_min, min(b_max, float(sigma_a)))
+
+
+def render_step3_between_continuous(
+    advisor_prefix: str,
+    rope_width: float,
+    precision_goal: float,
+    sigma_a_min_default: float = 1.0,
+    sigma_a_max_default: float = 10.0,
+    sigma_b_min_default: float = 1.0,
+    sigma_b_max_default: float = 10.0,
+    label_a: str = "A",
+    label_b: str = "B",
+) -> tuple:
+    """Render Step 3 (N_goal estimation) for between-groups continuous in the main area.
+
+    Returns (explore_sigma_a, explore_sigma_b, explore_omega).
+    """
+    st.markdown("#### Step 3 — Estimated Sample Size")
+    st.caption(
+        f"How many observations per group would you need? "
+        f"Adjust σ_{label_a}, σ_{label_b}, and {GOAL_STR} below to explore."
+    )
+
+    w_goal_min = 0.5 * float(rope_width)
+    w_goal_max = float(rope_width)
+
+    # ── σ ranges (number inputs) ───────────────────────────────────────────────
+    col_a_range, col_b_range = st.columns(2)
+    with col_a_range:
+        st.markdown(f"**σ_{label_a} range**")
+        col_amin, col_amax = st.columns(2)
+        with col_amin:
+            sigma_a_min = st.number_input(
+                "min",
+                min_value=0.001,
+                value=float(st.session_state.get(f"{advisor_prefix}_sigma_a_min", sigma_a_min_default)),
+                step=max(0.001, float(sigma_a_min_default) * 0.1),
+                format="%.4g",
+                key=f"{advisor_prefix}_sigma_a_min",
+            )
+        with col_amax:
+            sigma_a_max = st.number_input(
+                "max",
+                min_value=float(sigma_a_min) + 0.001,
+                value=float(st.session_state.get(f"{advisor_prefix}_sigma_a_max", sigma_a_max_default)),
+                step=max(0.001, float(sigma_a_max_default) * 0.1),
+                format="%.4g",
+                key=f"{advisor_prefix}_sigma_a_max",
+            )
+    with col_b_range:
+        st.markdown(f"**σ_{label_b} range**")
+        col_bmin, col_bmax = st.columns(2)
+        with col_bmin:
+            sigma_b_min = st.number_input(
+                "min",
+                min_value=0.001,
+                value=float(st.session_state.get(f"{advisor_prefix}_sigma_b_min", sigma_b_min_default)),
+                step=max(0.001, float(sigma_b_min_default) * 0.1),
+                format="%.4g",
+                key=f"{advisor_prefix}_sigma_b_min",
+            )
+        with col_bmax:
+            sigma_b_max = st.number_input(
+                "max",
+                min_value=float(sigma_b_min) + 0.001,
+                value=float(st.session_state.get(f"{advisor_prefix}_sigma_b_max", sigma_b_max_default)),
+                step=max(0.001, float(sigma_b_max_default) * 0.1),
+                format="%.4g",
+                key=f"{advisor_prefix}_sigma_b_max",
+            )
+
+    sigma_a_min = float(sigma_a_min)
+    sigma_a_max = max(sigma_a_max, sigma_a_min + 0.001)
+    sigma_b_min = float(sigma_b_min)
+    sigma_b_max = max(sigma_b_max, sigma_b_min + 0.001)
+    sigma_a_mid = 0.5 * (sigma_a_min + sigma_a_max)
+    sigma_b_mid = 0.5 * (sigma_b_min + sigma_b_max)
+
+    linked = st.checkbox(
+        f"🔗 Link σ_{label_b} = σ_{label_a} (assume equal standard deviations)",
+        value=False,
+        key=f"{advisor_prefix}_link_sigma",
+    )
+
+    # Clamp persisted slider values to current ranges.
+    _sigma_a_val = float(st.session_state.get(f"{advisor_prefix}_explore_sigma_a", sigma_a_mid))
+    _sigma_a_val = max(sigma_a_min, min(sigma_a_max, _sigma_a_val))
+    _sigma_b_val = float(st.session_state.get(f"{advisor_prefix}_explore_sigma_b", sigma_b_mid))
+    _sigma_b_val = max(sigma_b_min, min(sigma_b_max, _sigma_b_val))
+
+    col_sa, col_sb, col_omega = st.columns(3)
+    with col_sa:
+        explore_sigma_a = st.slider(
+            f"σ_{label_a} (std dev)",
+            min_value=sigma_a_min,
+            max_value=sigma_a_max,
+            value=_sigma_a_val,
+            step=(sigma_a_max - sigma_a_min) / 100.0,
+            format="%.4g",
+            key=f"{advisor_prefix}_explore_sigma_a",
+            on_change=sync_sigma_b_to_sigma_a if linked else None,
+            kwargs={"advisor_prefix": advisor_prefix} if linked else None,
+        )
+    with col_sb:
+        explore_sigma_b = st.slider(
+            f"σ_{label_b} (std dev)",
+            min_value=sigma_b_min,
+            max_value=sigma_b_max,
+            value=_sigma_b_val,
+            step=(sigma_b_max - sigma_b_min) / 100.0,
+            format="%.4g",
+            key=f"{advisor_prefix}_explore_sigma_b",
+            disabled=linked,
+        )
+    with col_omega:
+        explore_omega = st.slider(
+            "ω_goal (precision)",
+            min_value=w_goal_min,
+            max_value=w_goal_max,
+            value=float(precision_goal),
+            step=max(0.0001, (w_goal_max - w_goal_min) / 100.0),
+            format="%.4g",
+            key=f"{advisor_prefix}_explore_omega",
+        )
+
+    r = st.session_state.get(f"{advisor_prefix}_ratio", 0.5)
+    z_star = st.session_state.get(f"{advisor_prefix}_z_star", 1.96)
+
+    v_eff = explore_sigma_a ** 2 / r + explore_sigma_b ** 2 / (1 - r)
+    n_total_est = 4 * z_star ** 2 * v_eff / explore_omega ** 2
+    n_a_goal = max(1, math.ceil(r * n_total_est))
+    n_b_goal = max(1, math.ceil((1 - r) * n_total_est))
+
+    st.latex(
+        r"N_{\rm goal,\,total} \approx \left\lceil"
+        r"\frac{4\,z_*^2 \left["
+        r"\dfrac{\sigma_A^2}{r}"
+        r"+\dfrac{\sigma_B^2}{1-r}"
+        r"\right]}{\omega_{\rm goal}^2}"
+        r"\right\rceil"
+    )
+    col_na, col_nb = st.columns(2)
+    with col_na:
+        st.metric(label=f"N_{label_a} goal", value=f"{n_a_goal:,}")
+    with col_nb:
+        st.metric(label=f"N_{label_b} goal", value=f"{n_b_goal:,}")
+
+    with st.expander("⚙️ Advanced"):
+        st.slider(
+            "Group ratio r = n_A / (n_A + n_B)",
+            min_value=0.1,
+            max_value=0.9,
+            value=0.5,
+            step=0.05,
+            format="%.2f",
+            key=f"{advisor_prefix}_ratio",
+            help="0.5 = equal group sizes (default). Adjust if you expect unequal allocation.",
+        )
+        adv_z = st.number_input(
+            "z* (critical value)",
+            min_value=1.0,
+            max_value=4.0,
+            value=1.96,
+            step=0.01,
+            format="%.2f",
+            key=f"{advisor_prefix}_z_star",
+            help="1.96 ≈ 95% HDI, 2.576 ≈ 99% HDI",
+        )
+        adv_col1, adv_col2 = st.columns(2)
+        with adv_col1:
+            st.number_input(
+                "Background ω min",
+                min_value=w_goal_min * 0.5,
+                max_value=w_goal_max,
+                value=w_goal_min,
+                step=max(0.0001, (w_goal_max - w_goal_min) / 10.0),
+                format="%.4g",
+                key=f"{advisor_prefix}_w_min",
+            )
+        with adv_col2:
+            st.number_input(
+                "Background ω max",
+                min_value=w_goal_min,
+                max_value=w_goal_max * 2,
+                value=w_goal_max,
+                step=max(0.0001, (w_goal_max - w_goal_min) / 10.0),
+                format="%.4g",
+                key=f"{advisor_prefix}_w_max",
+            )
+        adv_r = st.session_state.get(f"{advisor_prefix}_ratio", 0.5)
+        v_eff_adv = explore_sigma_a ** 2 / adv_r + explore_sigma_b ** 2 / (1 - adv_r)
+        n_total_adv = math.ceil(4 * adv_z ** 2 * v_eff_adv / explore_omega ** 2)
+        adv_col3, adv_col4 = st.columns(2)
+        with adv_col3:
+            st.metric(label=f"N_{label_a} goal (custom)", value=f"{max(1, math.ceil(adv_r * n_total_adv)):,}")
+        with adv_col4:
+            st.metric(label=f"N_{label_b} goal (custom)", value=f"{max(1, math.ceil((1 - adv_r) * n_total_adv)):,}")
+
+    fig = plot_n_goal_by_sigma_between_groups(
+        omega_goal=explore_omega,
+        sigma_a_highlight=explore_sigma_a,
+        sigma_b_fixed=explore_sigma_b,
+        r=r,
+        z_star=z_star,
+        sigma_a_min=sigma_a_min,
+        sigma_a_max=sigma_a_max,
+        w_goal_min=st.session_state.get(f"{advisor_prefix}_w_min", w_goal_min),
+        w_goal_max=st.session_state.get(f"{advisor_prefix}_w_max", w_goal_max),
+        label_a=label_a,
+        label_b=label_b,
+    )
+    st.pyplot(fig)
+
+    return explore_sigma_a, explore_sigma_b, explore_omega
