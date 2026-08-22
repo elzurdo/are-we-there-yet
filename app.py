@@ -6,7 +6,7 @@ stopping algorithm for sequential hypothesis testing.
 
 Three views, controlled by _app_view in session state:
   "home"          — landing page: choose mode, variable type, and groups
-  "prospective"   — sample-size planning (binary only)
+  "prospective"   — sample-size planning (binary and continuous)
   "retrospective" — stopping verdict for observed data (all variable types)
 """
 import sys
@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 from tabs import binary, continuous, categorical
-from tabs import prospective_binary
+from tabs import prospective_binary, prospective_continuous
 from utils.tutorials import GLOSSARY_TABLE, GLOSSARY_TABLE_BETWEEN_GROUPS
 from utils.constants import (
     PREPRINT_URL, PREPRINT_CITE_INLINE, PREPRINT_APA, PREPRINT_BIBTEX, PREPRINT_ARXIV_ID,
@@ -150,8 +150,8 @@ def _render_home():
     st.markdown("### Variable type")
 
     if is_prospective:
-        _var_options = ["Binary"]
-        st.caption("Prospective planning is currently available for binary (Bernoulli) data.")
+        _var_options = ["Binary", "Continuous"]
+        st.caption("Prospective planning is available for binary and continuous data.")
     else:
         _var_options = ["Binary", "Continuous", "Categorical"]
 
@@ -210,7 +210,8 @@ def _render_prospective():
     )
     st.sidebar.divider()
 
-    inputs = prospective_binary.sidebar_inputs(_app_analysis_mode)
+    _tab = prospective_continuous if _app_variable_type == "Continuous" else prospective_binary
+    inputs = _tab.sidebar_inputs(_app_analysis_mode)
 
     _sidebar_watermark()
 
@@ -218,7 +219,7 @@ def _render_prospective():
     st.title("Sample Size Planning 📐")
     st.caption(f"{_app_variable_type} · {_app_analysis_mode}")
 
-    prospective_binary.render_results(inputs)
+    _tab.render_results(inputs)
 
     _glossary = GLOSSARY_TABLE_BETWEEN_GROUPS if _app_analysis_mode == "Between Groups" else GLOSSARY_TABLE
     with st.expander("📖 Glossary"):

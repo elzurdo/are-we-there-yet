@@ -25,6 +25,7 @@ from utils.constants import ROPE_MODE_HELP, GOAL_STR, XBAR_STR, xbar_label, s_la
 from utils.decision import dpitg_decision
 from utils.viz import plot_posterior_continuous, plot_posterior_difference, plot_nhst_posterior, plot_two_continuous_posteriors
 from utils.verdict import render_verdict_display
+from utils.rope_advisor import rope_advisor_dialog_continuous_single
 from utils.nhst import nhst_test
 from utils.tutorials import (
     NHST_LIMITATIONS, MATHS_CONTINUOUS_SINGLE_GROUP, MATHS_CONTINUOUS_BETWEEN_GROUPS,
@@ -105,6 +106,15 @@ def _sidebar_single_group() -> dict:
         key="cont_n",
     )
 
+    # Flush values committed by the ROPE adviser dialog before ROPE / precision
+    # widgets render so they pick up the new defaults.
+    if "_rope_advisor_cont_sg_result" in st.session_state:
+        _r = st.session_state.pop("_rope_advisor_cont_sg_result")
+        st.session_state["cont_rope_mode"] = _r["rope_mode"]
+        st.session_state["cont_rope_width"] = _r["rope_width"]
+        st.session_state["cont_precision_goal"] = _r["precision_goal"]
+        st.session_state["_force_commit"] = True
+
     st.sidebar.markdown("### 🎯 Hypothesis & Effect Size")
 
     # Streamlit widget labels do not render LaTeX; using Unicode/ASCII notation
@@ -148,6 +158,14 @@ def _sidebar_single_group() -> dict:
         value=8.0, step=0.1, format="%.3f", key="cont_precision_goal",
         help="Must not exceed the ROPE width for the method to work.",
     )
+
+    if st.sidebar.button(
+        "🧭 Help me choose",
+        key="cont_rope_advisor_btn",
+        help="Answer 3 short questions to get recommended ROPE & precision-goal values.",
+        use_container_width=True,
+    ):
+        rope_advisor_dialog_continuous_single(mu_null=theta_null)
 
     ci_fraction = CI_FRACTION
     decimal_places = 3

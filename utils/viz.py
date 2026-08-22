@@ -674,6 +674,61 @@ def plot_categorical_forest(
     return fig
 
 
+def plot_n_goal_by_sigma(
+    omega_goal=None,
+    sigma_highlight=None,
+    z_star=1.96,
+    sigma_min=1.0,
+    sigma_max=10.0,
+    w_goal_min=None,
+    w_goal_max=None,
+    n_background_curves=7,
+):
+    """Plot N_goal vs σ (standard deviation) for a continuous single-group setting.
+
+    Mirrors plot_n_goal_by_parameter; x-axis is σ instead of θ.
+    Background band spans w_goal_min to w_goal_max; highlighted point at sigma_highlight.
+    """
+    sigmas = np.linspace(sigma_min, sigma_max, 200)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+
+    if w_goal_min is not None and w_goal_max is not None and w_goal_min < w_goal_max:
+        bg_goals = np.linspace(w_goal_min, w_goal_max, n_background_curves)
+        for goal in bg_goals:
+            n_vals = 4 * z_star ** 2 * sigmas ** 2 / goal ** 2
+            ax.plot(sigmas, n_vals, color="gray", alpha=0.15, linewidth=1)
+        n_top = 4 * z_star ** 2 * sigmas ** 2 / w_goal_min ** 2
+        n_bot = 4 * z_star ** 2 * sigmas ** 2 / w_goal_max ** 2
+        ax.fill_between(sigmas, n_bot, n_top, alpha=0.06, color="gray")
+        ax.text(
+            sigmas[5], float(np.max(n_top)) * 0.92,
+            f"ω = {w_goal_min:.4g}–{w_goal_max:.4g}",
+            fontsize=8, color="gray", alpha=0.6,
+        )
+
+    if omega_goal is not None:
+        n_user = 4 * z_star ** 2 * sigmas ** 2 / omega_goal ** 2
+        ax.plot(sigmas, n_user, color="steelblue", linewidth=2.5,
+                label=f"{GOAL_STR} = {omega_goal:.4g}", zorder=3)
+
+        if sigma_highlight is not None:
+            n_at_sigma = 4 * z_star ** 2 * sigma_highlight ** 2 / omega_goal ** 2
+            ax.plot(sigma_highlight, n_at_sigma, "o", color="darkred",
+                    markersize=10, zorder=5,
+                    label=f"{N_GOAL_STR} ≈ {max(1, int(np.ceil(n_at_sigma))):,}"
+                          f" at σ = {sigma_highlight:.4g}")
+
+    ax.legend(fontsize=9)
+    ax.grid(alpha=0.3)
+    ax.set_xlabel(r"$\sigma$ (standard deviation)", fontsize=12)
+    ax.set_ylabel(r"$N_{\rm goal}(\sigma,\, \omega_{\rm goal})$", fontsize=12)
+    ax.set_title(r"Minimum $N_{\rm goal}$ to Achieve Precision Goal", fontsize=14)
+    ax.set_yticks([])
+    fig.tight_layout()
+    return fig
+
+
 def plot_n_goal_by_parameter(
     omega_goal=None,
     theta_highlight=None,

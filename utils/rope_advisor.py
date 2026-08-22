@@ -20,6 +20,7 @@ from utils.constants import (
     BINARY_SINGLE_MIN_EFFECT_STR,
     BINARY_SINGLE_NULL_STR,
     BINARY_BG_NULL_STR,
+    CONTINUOUS_NULL_STR,
     GOAL_STR,
     ROPE_WIDTH_STR,
     ROPE_HALF_WIDTH_STR,
@@ -29,9 +30,11 @@ from utils.constants import (
 from utils.size_planner import (
     DOMAIN_PRESETS,
     BETWEEN_GROUPS_DOMAIN_PRESETS,
+    CONTINUOUS_SINGLE_DOMAIN_PRESETS,
     render_steps_1_and_2,
     render_step3_single,
     render_step3_between,
+    render_step3_single_continuous,
 )
 
 
@@ -220,6 +223,84 @@ def rope_advisor_dialog_binary_between_groups(
         disabled=not all_ready or goal_too_wide,
         on_click=_on_apply_click,
         kwargs={"advisor_prefix": pfx, "result_key": "_rope_advisor_bg_result"},
+    )
+    st.caption(
+        "These values will fill in the sidebar — "
+        "then enter your observed data to get a verdict."
+    )
+
+
+# ── Continuous single-group dialog ────────────────────────────────────────────
+
+@st.dialog("🧭 Help me choose ROPE & Precision Goal", width="large")
+def rope_advisor_dialog_continuous_single(mu_null: float = 0.0) -> None:
+    """Interactive 3-step guide for continuous single-group ROPE & precision goal.
+
+    On Apply, stages result to _rope_advisor_cont_sg_result so the flush block
+    in _sidebar_single_group (continuous.py) can inject the values before widgets
+    render.
+    """
+    if "_rope_advisor_cont_sg_result" in st.session_state:
+        st.rerun(scope="app")
+
+    pfx = "_advisor_cont_sg"
+
+    learn_more = (
+        f"Enter the smallest change in your measurement that would trigger a decision.  \n"
+        f"The **ROPE** (Region of Practical Equivalence) spans ±Δ_min around {CONTINUOUS_NULL_STR}, "
+        f"giving {ROPE_WIDTH_STR} = 2 × Δ_min."
+    )
+
+    rope_width, precision_goal, all_ready, goal_too_wide = render_steps_1_and_2(
+        advisor_prefix=pfx,
+        presets=CONTINUOUS_SINGLE_DOMAIN_PRESETS,
+        null_val=mu_null,
+        null_label=CONTINUOUS_NULL_STR,
+        effect_label="Δ_min",
+        step1_caption=(
+            "What's the smallest change in your measurement that your team would act on? "
+            "This will determine the ROPE around the null value."
+        ),
+        step1_learn_more=learn_more,
+        step1_help=f"The ROPE spans ±Δ_min around {CONTINUOUS_NULL_STR}. {ROPE_WIDTH_STR} = 2 × Δ_min.",
+        min_effect_max=None,
+        min_effect_step=0.1,
+        min_effect_format="%.2f",
+    )
+
+    if all_ready and not goal_too_wide:
+        st.divider()
+        preset = CONTINUOUS_SINGLE_DOMAIN_PRESETS.get(
+            st.session_state.get(f"{pfx}_preset", "🔧 Custom (I'll set my own)")
+        )
+        sigma_min_default = preset.get("sigma_min", rope_width) if preset else rope_width
+        sigma_max_default = preset.get("sigma_max", rope_width * 5) if preset else rope_width * 5
+
+        _, explore_omega = render_step3_single_continuous(
+            advisor_prefix=pfx,
+            rope_width=rope_width,
+            precision_goal=precision_goal,
+            sigma_min_default=sigma_min_default,
+            sigma_max_default=sigma_max_default,
+        )
+
+        omega_changed = abs(explore_omega - precision_goal) > 1e-6
+        if omega_changed:
+            st.success(
+                f"**Values that will be applied:**  \n"
+                f"- {GOAL_STR} updated to **{explore_omega:.4g}** "
+                f"(was {precision_goal:.4g} from Step 2)  \n"
+                f"- **ROPE:** [{mu_null - rope_width/2:.4g}, "
+                f"{mu_null + rope_width/2:.4g}] "
+                f"({ROPE_WIDTH_STR} = {rope_width:.4g})"
+            )
+
+    st.button(
+        "✅ Apply",
+        type="primary",
+        disabled=not all_ready or goal_too_wide,
+        on_click=_on_apply_click,
+        kwargs={"advisor_prefix": pfx, "result_key": "_rope_advisor_cont_sg_result"},
     )
     st.caption(
         "These values will fill in the sidebar — "

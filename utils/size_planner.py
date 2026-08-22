@@ -14,6 +14,7 @@ from utils.constants import (
     BINARY_SINGLE_MIN_EFFECT_STR,
     BINARY_SINGLE_NULL_STR,
     BINARY_BG_NULL_STR,
+    CONTINUOUS_NULL_STR,
     GOAL_STR,
     HDI_WIDTH_STR,
     ROPE_WIDTH_STR,
@@ -25,10 +26,13 @@ from utils.constants import (
 from utils.stats import (
     binomial_rate_ci_width_to_sample_size,
     binomial_difference_ci_width_to_sample_size,
+    estimate_n_goal,
+    CI_FRACTION,
 )
 from utils.viz import (
     plot_n_goal_by_parameter,
     plot_n_goal_by_parameter_between_groups,
+    plot_n_goal_by_sigma,
 )
 
 # ── Single-group domain presets ───────────────────────────────────────────────
@@ -71,6 +75,55 @@ DOMAIN_PRESETS = {
             "A shift of 0.01 in true support is meaningful in a tight race. "
             "Polling data is expensive (each response costs real fieldwork), "
             "but getting the call wrong is worse — you need high precision."
+        ),
+    },
+}
+
+# ── Continuous single-group domain presets ────────────────────────────────────
+CONTINUOUS_SINGLE_DOMAIN_PRESETS = {
+    "🔧 Custom (I'll set my own)": None,
+    "🧪 Clinical biomarker": {
+        "min_meaningful_effect": 5.0,
+        "precision_pct": 80,
+        "sigma_min": 10.0,
+        "sigma_max": 30.0,
+        "narrative": (
+            "You're tracking a lab value such as blood pressure or cholesterol. "
+            "A shift of 5 units would change clinical decisions. "
+            "High precision is essential — wrong calls affect patient care."
+        ),
+    },
+    "📚 Educational assessment": {
+        "min_meaningful_effect": 5.0,
+        "precision_pct": 80,
+        "sigma_min": 10.0,
+        "sigma_max": 25.0,
+        "narrative": (
+            "You're measuring test scores on a 0–100 scale. "
+            "A shift of 5 points is the smallest educationally meaningful change. "
+            "Precision matters but data is relatively cheap to collect."
+        ),
+    },
+    "⚙️ Engineering / QC": {
+        "min_meaningful_effect": 0.5,
+        "precision_pct": 90,
+        "sigma_min": 1.0,
+        "sigma_max": 5.0,
+        "narrative": (
+            "You're measuring a manufacturing parameter such as diameter or weight. "
+            "Deviations above 0.5 units exceed tolerance. "
+            "Tight precision is required — process decisions are expensive to reverse."
+        ),
+    },
+    "📊 Survey / Likert scale": {
+        "min_meaningful_effect": 0.5,
+        "precision_pct": 75,
+        "sigma_min": 0.5,
+        "sigma_max": 2.5,
+        "narrative": (
+            "You're averaging responses on a 5- or 7-point Likert scale. "
+            "A shift of 0.5 scale points is the smallest perceptible change. "
+            "Moderate precision is acceptable and data is relatively cheap."
         ),
     },
 }
@@ -150,6 +203,10 @@ def render_domain_preset(presets: dict, advisor_prefix: str, container=None) -> 
             st.session_state[f"{advisor_prefix}_min_effect"] = float(preset["min_meaningful_effect"])
             if "precision_pct" in preset:
                 st.session_state[f"{advisor_prefix}_precision_pct"] = int(preset["precision_pct"])
+            if "sigma_min" in preset:
+                st.session_state[f"{advisor_prefix}_sigma_min"] = float(preset["sigma_min"])
+            if "sigma_max" in preset:
+                st.session_state[f"{advisor_prefix}_sigma_max"] = float(preset["sigma_max"])
 
     return preset_name, preset
 
@@ -192,6 +249,9 @@ def render_steps_1_and_2(
     step1_help: str = None,
     container=None,
     preset=_PRESET_NOT_PROVIDED,
+    min_effect_max: float = 0.50,
+    min_effect_step: float = 0.001,
+    min_effect_format: str = "%.4f",
 ) -> tuple:
     """Render Steps 1 and 2 into `container` (default st; pass st.sidebar for the sidebar).
 
@@ -253,9 +313,9 @@ def render_steps_1_and_2(
     min_effect = container.number_input(
         f"Minimum meaningful {effect_label} around each side of {null_label}",
         min_value=0.0001,
-        max_value=0.50,
-        step=0.001,
-        format="%.4f",
+        max_value=min_effect_max,
+        step=min_effect_step,
+        format=min_effect_format,
         help=_help,
         key=f"{advisor_prefix}_min_effect",
         **_diff_kwargs,
@@ -579,3 +639,134 @@ def render_step3_between(
     st.pyplot(fig)
 
     return explore_p_a, explore_p_b, explore_omega
+
+
+def render_step3_single_continuous(
+    advisor_prefix: str,
+    rope_width: float,
+    precision_goal: float,
+    sigma_min_default: float = 1.0,
+    sigma_max_default: float = 10.0,
+    ci_fraction: float = CI_FRACTION,
+) -> tuple:
+    """Render Step 3 (N_goal estimation) for single-group continuous in the main area.
+
+    Returns (explore_sigma, explore_omega).
+    """
+    st.markdown("#### Step 3 — Estimated Sample Size")
+    st.caption(
+        "How many observations would you need to reach this precision? "
+        "Set the σ range below, then adjust σ and ω_goal to explore."
+    )
+
+    w_goal_min = 0.5 * float(rope_width)
+    w_goal_max = float(rope_width)
+
+    # ── σ range ───────────────────────────────────────────────────────────────
+    col_smin, col_smax = st.columns(2)
+    with col_smin:
+        sigma_min = st.number_input(
+            "σ range — min",
+            min_value=0.001,
+            value=float(st.session_state.get(f"{advisor_prefix}_sigma_min", sigma_min_default)),
+            step=max(0.001, float(sigma_min_default) * 0.1),
+            format="%.4g",
+            key=f"{advisor_prefix}_sigma_min",
+        )
+    with col_smax:
+        sigma_max = st.number_input(
+            "σ range — max",
+            min_value=float(sigma_min) + 0.001,
+            value=float(st.session_state.get(f"{advisor_prefix}_sigma_max", sigma_max_default)),
+            step=max(0.001, float(sigma_max_default) * 0.1),
+            format="%.4g",
+            key=f"{advisor_prefix}_sigma_max",
+        )
+
+    sigma_min = float(sigma_min)
+    sigma_max = max(sigma_max, sigma_min + 0.001)
+    sigma_mid = 0.5 * (sigma_min + sigma_max)
+
+    # Clamp persisted slider value to current range to avoid Streamlit errors.
+    _sigma_val = float(st.session_state.get(f"{advisor_prefix}_explore_sigma", sigma_mid))
+    _sigma_val = max(sigma_min, min(sigma_max, _sigma_val))
+
+    col_sigma, col_omega = st.columns(2)
+    with col_sigma:
+        explore_sigma = st.slider(
+            "σ (expected std dev)",
+            min_value=sigma_min,
+            max_value=sigma_max,
+            value=_sigma_val,
+            step=(sigma_max - sigma_min) / 100.0,
+            format="%.4g",
+            key=f"{advisor_prefix}_explore_sigma",
+        )
+    with col_omega:
+        explore_omega = st.slider(
+            "ω_goal (precision)",
+            min_value=w_goal_min,
+            max_value=w_goal_max,
+            value=float(precision_goal),
+            step=max(0.0001, (w_goal_max - w_goal_min) / 100.0),
+            format="%.4g",
+            key=f"{advisor_prefix}_explore_omega",
+        )
+
+    z_star = st.session_state.get(f"{advisor_prefix}_z_star", 1.96)
+    n_goal, _ = estimate_n_goal(explore_sigma ** 2, explore_omega, 0, ci_fraction)
+
+    st.latex(
+        r"N_{\rm goal} \approx \left\lceil"
+        r"\frac{4\,z_*^2\,\sigma^2}{\omega_{\rm goal}^2}"
+        r"\right\rceil"
+    )
+    st.metric(label="N_goal (estimated minimum sample size)", value=f"{n_goal:,}")
+
+    with st.expander("⚙️ Advanced"):
+        adv_z = st.number_input(
+            "z* (critical value)",
+            min_value=1.0,
+            max_value=4.0,
+            value=1.96,
+            step=0.01,
+            format="%.2f",
+            key=f"{advisor_prefix}_z_star",
+            help="1.96 ≈ 95% HDI, 2.576 ≈ 99% HDI",
+        )
+        adv_col1, adv_col2 = st.columns(2)
+        with adv_col1:
+            st.number_input(
+                "Background ω min",
+                min_value=w_goal_min * 0.5,
+                max_value=w_goal_max,
+                value=w_goal_min,
+                step=max(0.0001, (w_goal_max - w_goal_min) / 10.0),
+                format="%.4g",
+                key=f"{advisor_prefix}_w_min",
+            )
+        with adv_col2:
+            st.number_input(
+                "Background ω max",
+                min_value=w_goal_min,
+                max_value=w_goal_max * 2,
+                value=w_goal_max,
+                step=max(0.0001, (w_goal_max - w_goal_min) / 10.0),
+                format="%.4g",
+                key=f"{advisor_prefix}_w_max",
+            )
+        n_goal_adv = math.ceil(4 * adv_z ** 2 * explore_sigma ** 2 / explore_omega ** 2)
+        st.metric(label="N_goal (with custom z*)", value=f"{n_goal_adv:,}")
+
+    fig = plot_n_goal_by_sigma(
+        omega_goal=explore_omega,
+        sigma_highlight=explore_sigma,
+        z_star=z_star,
+        sigma_min=sigma_min,
+        sigma_max=sigma_max,
+        w_goal_min=st.session_state.get(f"{advisor_prefix}_w_min", w_goal_min),
+        w_goal_max=st.session_state.get(f"{advisor_prefix}_w_max", w_goal_max),
+    )
+    st.pyplot(fig)
+
+    return explore_sigma, explore_omega
