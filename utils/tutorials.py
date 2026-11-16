@@ -470,6 +470,67 @@ Bayesian *t* tests for accepting and rejecting the null hypothesis.
 *Psychonomic Bulletin & Review*, 16(2), 225–237.
 """
 
+MATHS_CATEGORICAL = r"""
+**Categorical inference via Dirichlet marginals (One-vs-Rest)**
+
+When we observe counts across $K$ categories with total $N$:
+
+- Category $i$ count: $c_i$, with $\sum_i c_i = N$
+- Observed proportion: $\hat p_i = c_i / N$
+
+**Bayesian posterior (flat Dirichlet prior):**
+
+The joint posterior is $\text{Dir}(\mathbf{c} + \mathbf{1})$. Each marginal is exactly a
+Beta distribution:
+
+$$p_i \mid \text{data} \;\sim\; \text{Beta}(c_i + 1,\; N - c_i + 1)$$
+
+This is identical to a single-group binary analysis with $c_i$ successes and $N - c_i$
+failures. The HDI for each $p_i$ is computed exactly on this Beta posterior.
+
+**Null hypothesis (One-vs-Rest):**
+
+The natural null is the uniform distribution: $\theta_{\rm null} = 1/K$.
+The ROPE is centred on this value. A category's HDI fully inside the ROPE
+means its proportion is practically equivalent to the uniform baseline;
+fully outside means it is meaningfully over- or under-represented.
+
+**DPitG stopping criterion (applied per category):**
+
+The algorithm stops collecting data when, for all categories simultaneously:
+
+1. **Precision**: HDI width $\leq \omega_{\rm goal}$
+2. **Location**: HDI falls entirely inside *or* outside the ROPE
+
+---
+
+**One-vs-Reference (pairwise) mode:**
+
+When comparing each category against a chosen reference, the estimand is the
+difference in proportions $\delta_i = p_i - p_{\rm ref}$. Using the CLT approximation
+for two independent proportions:
+
+$$\delta_i \;\sim\; \mathcal{N}\!\left(\hat p_i - \hat p_{\rm ref},\;
+\frac{\hat p_i(1-\hat p_i)}{c_i} + \frac{\hat p_{\rm ref}(1-\hat p_{\rm ref})}{c_{\rm ref}}\right)$$
+
+Note: each group uses its *own* count ($c_i$ and $c_{\rm ref}$), not the total $N$.
+The null is $\delta_0 = 0$ and the ROPE is centred on that difference.
+
+---
+
+**Sample size planning (One-vs-Rest):**
+
+By the Normal approximation to the Beta posterior:
+
+$$N_{\rm goal} \approx \frac{4 z_*^2\; \hat p_i(1-\hat p_i)}{\omega_{\rm goal}^2}$$
+
+For the uniform case $\hat p_i = 1/K$:
+
+$$N_{\rm goal} \approx \frac{4 z_*^2\;\dfrac{1}{K}\!\left(1-\dfrac{1}{K}\right)}{\omega_{\rm goal}^2}$$
+
+The hardest category to distinguish (closest $p_i$ to $0.5$) drives the required $N$.
+"""
+
 BAYES_FACTOR_INTRO_CATEGORICAL = """
 **Bayes Factor (BF₁₀)** for each category vs. the uniform null:
 - **H₀**: θ_k = 1/K (category k has the expected proportion under a uniform distribution)

@@ -553,6 +553,83 @@ in `tabs/categorical.py`, rendered after the forest plot.
 
 ---
 
+## 11. Categorical tab — correctness, ROPE adviser, and prospective planning
+
+Issues identified in a design review session (2026-08-22).
+
+---
+
+### 11a. Bug — current implementation is pairwise, not one-vs-rest
+
+**Status: 🔴 Bug**
+
+The tab is titled "One-vs-Rest" but the implementation is pairwise comparison
+against a user-selected reference category. With categories A, B, C and reference=A,
+the app shows B vs A and C vs A — never B vs C, and never B vs (A+C).
+
+There is also a secondary precision bug: `binary_difference_hdi` is called with
+`total_count` as "n" for *both* groups, even though each group has only its own
+count. This artificially inflates precision.
+
+**Correct approach — true one-vs-rest (Dirichlet marginal):**
+For each category i, the posterior on p_i is exactly Beta(n_i + 1, N_total − n_i + 1)
+(flat prior). This is a single-group binary analysis:
+- successes = n_i
+- trials = N_total
+- θ_null = 1/K (uniform null) or user-specified
+- ROPE and precision goal on the proportion scale [0, 1]
+
+This matches what the Bayes Factor block already does correctly (lines 362–368 of
+`tabs/categorical.py`), so the DPitG analysis should mirror it.
+
+**Downstream changes required:**
+- Remove "Reference Category" selector (no reference needed; all K categories
+  are analysed symmetrically on the same footing)
+- Replace `binary_difference_hdi` calls with `successes_failures_to_hdi_ci_limits`
+  (single-group HDI on the proportion scale)
+- Reframe θ_null from a *difference* (Δ₀) to a *proportion null* (defaulting to 1/K)
+- ROPE moves from the difference scale to the proportion scale
+- Forest plot x-axis shows p_i (or deviation from 1/K), not δ
+- K=2 edge case: two comparisons become exact mirrors; handle or suppress
+
+---
+
+### 11b. ROPE Adviser for Categorical (Retrospective)
+
+Add a ROPE adviser button to the categorical sidebar, consistent with the binary
+and continuous advisers already implemented (see §6a). Since the corrected analysis
+is a single-group binary problem per category, the adviser logic is close to
+`rope_advisor_dialog_binary_single` but with:
+- θ_null defaulting to 1/K (auto-computed from sidebar K input)
+- N_goal formula: N_goal ≈ 4z²* · (1/K)(1 − 1/K) / ω_goal² (uniform case)
+
+Design questions to resolve before implementing — see conversation 2026-08-22.
+
+---
+
+### 11c. Prospective Planning for Categorical
+
+Two sub-modes:
+
+**v1 — Equal proportions (1/K each):**
+N_goal ≈ 4z²* · (1/K)(1 − 1/K) / ω_goal²
+Only inputs: K and ω_goal. Clean closed-form formula; no reference category needed.
+Worst-case category is the same for all (uniform), so one N_goal covers all.
+
+**v2 — Unequal proportions (user-specified p_i):**
+Compute N_i = 4z²* · p_i(1 − p_i) / ω_goal² for each category independently.
+Report max(N_i) as the required N. Show per-category breakdown so the user
+can see which comparison drives the budget.
+
+Both modes are grounded in the same single-group Binary planning formula already
+used in `utils/size_planner.py`; no new theory is required.
+Multiple-comparisons concern: note in the UI (same as existing categorical caveats),
+but does not affect the planning formula.
+
+Design questions to resolve before implementing — see conversation 2026-08-22.
+
+---
+
 ## 9. (Optional) Build a skill for the app
 
 Consider creating a `.claude/skills/run-app.md` skill for the are-we-there-yet repo
